@@ -1,10 +1,11 @@
-import { StyleSheet, TouchableOpacity, View, ScrollView, TextInput, Dimensions, Image } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, ScrollView, TextInput, Dimensions, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
+import { useFashion } from '@/context/FashionContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 60;
@@ -42,24 +43,72 @@ const SPECIAL_OFFERS = [
   },
 ];
 
-// Flash sale products
-const FLASH_SALE_PRODUCTS = [
-  { id: '1', name: 'Classic White Sneakers', price: 79.99, originalPrice: 129.99, rating: 4.8, image: '👟' },
-  { id: '2', name: 'Elegant Watch', price: 149.99, originalPrice: 249.99, rating: 4.9, image: '⌚' },
-  { id: '3', name: 'Summer T-Shirt', price: 29.99, originalPrice: 49.99, rating: 4.5, image: '👕' },
-  { id: '4', name: 'Wireless Earbuds', price: 59.99, originalPrice: 99.99, rating: 4.7, image: '🎧' },
-];
+// Category emojis for products without images
+const CATEGORY_EMOJIS: Record<string, string> = {
+  'Clothes': '👕',
+  'Electronics': '📱',
+  'Shoes': '👟',
+  'Watch': '⌚',
+  'Accessories': '🎧',
+  'default': '🛍️',
+};
 
 // Filter tabs
 const FILTER_TABS = ['All', 'Newest', 'Popular', 'Clothes'];
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { products, isLoadingProducts, toggleWishlist, isInWishlist } = useFashion();
   const [activeOfferIndex, setActiveOfferIndex] = useState(0);
-  const [activeFilter, setActiveFilter] = useState('Newest');
+  const [activeFilter, setActiveFilter] = useState('All');
   const [countdown, setCountdown] = useState({ hours: 2, minutes: 12, seconds: 56 });
   const [searchQuery, setSearchQuery] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Get filtered products
+  const getFilteredProducts = () => {
+    let filtered = [...products];
+    
+    // Search filter
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(p => 
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.category?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    // Category filter
+    if (activeFilter !== 'All') {
+      if (activeFilter === 'Newest') {
+        filtered = filtered.slice(0, 8);
+      } else if (activeFilter === 'Popular') {
+        filtered = filtered.sort((a, b) => (b.average_rating || 0) - (a.average_rating || 0)).slice(0, 8);
+      } else {
+        filtered = filtered.filter(p => 
+          p.category?.toLowerCase().includes(activeFilter.toLowerCase())
+        );
+      }
+    }
+    
+    return filtered.slice(0, 8);
+  };
+
+  const displayProducts = getFilteredProducts();
+
+  const getProductEmoji = (category?: string) => {
+    if (!category) return CATEGORY_EMOJIS.default;
+    return CATEGORY_EMOJIS[category] || CATEGORY_EMOJIS.default;
+  };
+
+  const getProductImage = (product: any) => {
+    if (product.images && product.images.length > 0 && product.images[0].image_base64) {
+      return `data:${product.images[0].image_type};base64,${product.images[0].image_base64}`;
+    }
+    if (product.image) {
+      return product.image;
+    }
+    return null;
+  };
 
   // Countdown timer effect
   useEffect(() => {
@@ -253,33 +302,70 @@ export default function HomeScreen() {
           </ScrollView>
 
           {/* Flash Sale Products */}
-          <View style={styles.productsGrid}>
-            {FLASH_SALE_PRODUCTS.map((product) => (
-              <TouchableOpacity
-                key={product.id}
-                style={styles.productCard}
-                onPress={() => router.push(`/productDetail?id=${product.id}`)}
-              >
-                <View style={styles.productImageContainer}>
-                  <ThemedText style={styles.productEmoji}>{product.image}</ThemedText>
-                  <TouchableOpacity style={styles.wishlistIcon}>
-                    <Ionicons name="heart-outline" size={18} color={ShopFlareColors.primary} />
+          {isLoadingProducts ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={ShopFlareColors.primary} />
+              <ThemedText style={styles.loadingText}>Loading products...</ThemedText>
+            </View>
+          ) : displayProducts.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="bag-outline" size={48} color="#DDD" />
+              <ThemedText style={styles.emptyText}>No products available</ThemedText>
+            </View>
+          ) : (
+            <View style={styles.productsGrid}>
+              {displayProducts.map((product) => {
+                const imageUrl = getProductImage(product);
+                const isWishlisted = isInWishlist(product.id);
+                return (
+                  <TouchableOpacity
+                    key={product.id}
+                    style={styles.productCard}
+                    onPress={() => router.push(`/productDetail?id=${product.id}`)}
+                  >
+                    <View style={styles.productImageContainer}>
+                      {imageUrl ? (
+                        <Image source={{ uri: imageUrl }} style={styles.productImage} resizeMode="cover" />
+                      ) : (
+                        <ThemedText style={styles.productEmoji}>{getProductEmoji(product.category)}</ThemedText>
+                      )}
+                      <TouchableOpacity 
+                        style={styles.wishlistIcon}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          toggleWishlist(product.id);
+                        }}
+                      >
+                        <Ionicons 
+                          name={isWishlisted ? "heart" : "heart-outline"} 
+                          size={18} 
+                          color={ShopFlareColors.primary} 
+                        />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.productInfo}>
+                      <ThemedText style={styles.productName} numberOfLines={2}>{product.name}</ThemedText>
+                      <View style={styles.priceRow}>
+                        <ThemedText style={styles.productPrice}>${parseFloat(String(product.price)).toFixed(2)}</ThemedText>
+                        {product.originalPrice && (
+                          <ThemedText style={styles.originalPrice}>${parseFloat(String(product.originalPrice)).toFixed(2)}</ThemedText>
+                        )}
+                      </View>
+                      <View style={styles.ratingRow}>
+                        <Ionicons name="star" size={14} color="#FFD700" />
+                        <ThemedText style={styles.ratingText}>
+                          {product.average_rating ? parseFloat(String(product.average_rating)).toFixed(1) : '0.0'}
+                        </ThemedText>
+                        {product.brand_name && (
+                          <ThemedText style={styles.brandNameText} numberOfLines={1}>By {product.brand_name}</ThemedText>
+                        )}
+                      </View>
+                    </View>
                   </TouchableOpacity>
-                </View>
-                <View style={styles.productInfo}>
-                  <ThemedText style={styles.productName} numberOfLines={2}>{product.name}</ThemedText>
-                  <View style={styles.priceRow}>
-                    <ThemedText style={styles.productPrice}>${product.price}</ThemedText>
-                    <ThemedText style={styles.originalPrice}>${product.originalPrice}</ThemedText>
-                  </View>
-                  <View style={styles.ratingRow}>
-                    <Ionicons name="star" size={14} color="#FFD700" />
-                    <ThemedText style={styles.ratingText}>{product.rating}</ThemedText>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+                );
+              })}
+            </View>
+          )}
         </View>
 
         {/* Bottom spacing */}
@@ -549,6 +635,26 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    color: '#666',
+    fontSize: 14,
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    marginTop: 12,
+    color: '#999',
+    fontSize: 14,
+  },
   productCard: {
     width: '48%',
     backgroundColor: '#FFF',
@@ -567,6 +673,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
   },
   productEmoji: {
     fontSize: 56,
@@ -612,5 +722,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginLeft: 4,
+  },
+  ratingCountText: {
+    fontSize: 11,
+    color: '#999',
+    marginLeft: 2,
+  },
+  brandNameText: {
+    fontSize: 11,
+    color: ShopFlareColors.primary,
+    flex: 1,
+    textAlign: 'right',
+    fontWeight: 'bold',
   },
 });

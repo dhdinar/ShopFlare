@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/constants/fashionData';
 import { useFashion } from '@/context/FashionContext';
-import { Product } from '@/constants/fashionData';
+import { Product } from '@/context/FashionContext';
 
 interface ProductCardProps {
   product: Product;
@@ -13,6 +13,9 @@ interface ProductCardProps {
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) => {
   const { toggleWishlist, isInWishlist } = useFashion();
   const inWishlist = isInWishlist(product.id);
+  
+  const rating = product.average_rating || product.rating || 0;
+  const totalRatings = product.total_ratings || 0;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
@@ -40,6 +43,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
             <Text style={styles.originalPrice}>${product.originalPrice.toFixed(2)}</Text>
           )}
         </View>
+        {totalRatings > 0 && (
+          <View style={styles.ratingContainer}>
+            <Ionicons name="star" size={14} color="#FFB800" />
+            <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
+            <Text style={styles.ratingCount}>({totalRatings})</Text>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -108,5 +118,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.darkGray,
     textDecorationLine: 'line-through',
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 4,
+  },
+  ratingText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.black,
+  },
+  ratingCount: {
+    fontSize: 11,
+    color: COLORS.darkGray,
   },
 });

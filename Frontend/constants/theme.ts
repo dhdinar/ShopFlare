@@ -5,8 +5,8 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#e2577a';
-const tintColorDark = '#FF6B6B';
+const tintColorLight = '#1A1A1A';
+const tintColorDark = '#1A1A1A';
 
 export const Colors = {
   light: {
@@ -29,11 +29,11 @@ export const Colors = {
 
 // ShopFlare Brand Colors
 export const ShopFlareColors = {
-  primary: '#FF6B6B',
-  primaryLight: '#FF8E8E',
-  primaryDark: '#E55A5A',
+  primary: '#1A1A1A',
+  primaryLight: '#444444',
+  primaryDark: '#0D0D0D',
   secondary: '#FFFFFF',
-  background: '#F8F9FA',
+  background: '#FFFFFF',
   cardBackground: '#FFFFFF',
   text: '#1A1A1A',
   textSecondary: '#666666',

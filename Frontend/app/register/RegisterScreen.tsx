@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   TextInput,
@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
@@ -23,12 +24,30 @@ interface RegisterScreenProps {
 
 export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProps) {
   const { register, isLoading } = useAuth();
+  const [isBrandRegistration, setIsBrandRegistration] = useState(false);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  
+  // Common fields
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  
+  // Brand-specific fields (username is the brand name for brands)
+  const [brandDescription, setBrandDescription] = useState('');
+  const [brandWebsite, setBrandWebsite] = useState('');
+  const [brandAddress, setBrandAddress] = useState('');
+
+  useEffect(() => {
+    Animated.spring(slideAnim, {
+      toValue: isBrandRegistration ? 1 : 0,
+      useNativeDriver: false,
+      tension: 50,
+      friction: 10,
+    }).start();
+  }, [isBrandRegistration]);
 
   const handleRegister = async () => {
     if (!username || !email || !password || !password2) {
@@ -43,18 +62,29 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
 
     try {
       await register({
-        username,
+        username,  // For brands, this IS the brand name
         email,
         password,
         password2,
         first_name: firstName,
         last_name: lastName,
+        user_type: isBrandRegistration ? 'brand' : 'user',
+        ...(isBrandRegistration && {
+          brand_description: brandDescription,
+          brand_website: brandWebsite,
+          brand_address: brandAddress,
+        }),
       });
-      Alert.alert('Success', 'Account created successfully!');
+      Alert.alert('Success', `${isBrandRegistration ? 'Brand' : 'Account'} created successfully!`);
     } catch (error: any) {
       Alert.alert('Registration Failed', error.message || 'An error occurred');
     }
   };
+
+  const sliderLeft = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['2%', '50%'],
+  });
 
   return (
     <KeyboardAvoidingView
@@ -65,25 +95,72 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Ionicons name="bag" size={40} color="#FFF" />
+            <Ionicons name={isBrandRegistration ? "storefront" : "bag"} size={40} color="#FFF" />
           </View>
           <Text style={styles.brandName}>ShopFlare</Text>
         </View>
 
         <ThemedView style={styles.innerContainer}>
           <ThemedText type="title" style={styles.title}>
-            Create Account
+            {isBrandRegistration ? 'Register Your Brand' : 'Create Account'}
           </ThemedText>
 
           <ThemedText style={styles.subtitle}>
-            Sign up to get started
+            {isBrandRegistration ? 'Set up your shop on ShopFlare' : 'Sign up to get started'}
           </ThemedText>
 
+          {/* Segmented Control for User/Brand */}
+          <View style={styles.segmentedContainer}>
+            <Animated.View 
+              style={[
+                styles.segmentedSlider,
+                { left: sliderLeft }
+              ]} 
+            />
+            <TouchableOpacity 
+              style={styles.segmentedButton}
+              onPress={() => setIsBrandRegistration(false)}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name="person" 
+                size={18} 
+                color={!isBrandRegistration ? '#FFF' : ShopFlareColors.textLight} 
+                style={styles.segmentedIcon}
+              />
+              <Text style={[
+                styles.segmentedText,
+                !isBrandRegistration && styles.segmentedTextActive
+              ]}>
+                Customer
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.segmentedButton}
+              onPress={() => setIsBrandRegistration(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name="storefront" 
+                size={18} 
+                color={isBrandRegistration ? '#FFF' : ShopFlareColors.textLight} 
+                style={styles.segmentedIcon}
+              />
+              <Text style={[
+                styles.segmentedText,
+                isBrandRegistration && styles.segmentedTextActive
+              ]}>
+                Brand
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Username / Brand Name Field */}
           <View style={styles.inputContainer}>
-            <Ionicons name="person-outline" size={20} color={ShopFlareColors.textLight} style={styles.inputIcon} />
+            <Ionicons name={isBrandRegistration ? "storefront-outline" : "person-outline"} size={20} color={ShopFlareColors.textLight} style={styles.inputIcon} />
             <TextInput
               style={[styles.input, isLoading && styles.inputDisabled]}
-              placeholder="Username"
+              placeholder={isBrandRegistration ? "Brand Name *" : "Username"}
               placeholderTextColor={ShopFlareColors.textLight}
               value={username}
               onChangeText={setUsername}
@@ -106,28 +183,75 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
             />
           </View>
 
-          <View style={styles.row}>
-            <View style={[styles.inputContainer, styles.halfInput]}>
-              <TextInput
-                style={[styles.input, isLoading && styles.inputDisabled]}
-                placeholder="First Name"
-                placeholderTextColor={ShopFlareColors.textLight}
-                value={firstName}
-                onChangeText={setFirstName}
-                editable={!isLoading}
-              />
+          {!isBrandRegistration && (
+            <View style={styles.row}>
+              <View style={[styles.inputContainer, styles.halfInput]}>
+                <TextInput
+                  style={[styles.input, isLoading && styles.inputDisabled]}
+                  placeholder="First Name"
+                  placeholderTextColor={ShopFlareColors.textLight}
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  editable={!isLoading}
+                />
+              </View>
+              <View style={[styles.inputContainer, styles.halfInput]}>
+                <TextInput
+                  style={[styles.input, isLoading && styles.inputDisabled]}
+                  placeholder="Last Name"
+                  placeholderTextColor={ShopFlareColors.textLight}
+                  value={lastName}
+                  onChangeText={setLastName}
+                  editable={!isLoading}
+                />
+              </View>
             </View>
-            <View style={[styles.inputContainer, styles.halfInput]}>
-              <TextInput
-                style={[styles.input, isLoading && styles.inputDisabled]}
-                placeholder="Last Name"
-                placeholderTextColor={ShopFlareColors.textLight}
-                value={lastName}
-                onChangeText={setLastName}
-                editable={!isLoading}
-              />
-            </View>
-          </View>
+          )}
+
+          {/* Brand-specific Fields */}
+          {isBrandRegistration && (
+            <>
+              <View style={[styles.inputContainer, styles.textAreaContainer]}>
+                <Ionicons name="document-text-outline" size={20} color={ShopFlareColors.textLight} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, styles.textArea, isLoading && styles.inputDisabled]}
+                  placeholder="Brand Description"
+                  placeholderTextColor={ShopFlareColors.textLight}
+                  value={brandDescription}
+                  onChangeText={setBrandDescription}
+                  editable={!isLoading}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Ionicons name="globe-outline" size={20} color={ShopFlareColors.textLight} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, isLoading && styles.inputDisabled]}
+                  placeholder="Website (optional)"
+                  placeholderTextColor={ShopFlareColors.textLight}
+                  value={brandWebsite}
+                  onChangeText={setBrandWebsite}
+                  editable={!isLoading}
+                  autoCapitalize="none"
+                  keyboardType="url"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Ionicons name="location-outline" size={20} color={ShopFlareColors.textLight} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, isLoading && styles.inputDisabled]}
+                  placeholder="Business Address (optional)"
+                  placeholderTextColor={ShopFlareColors.textLight}
+                  value={brandAddress}
+                  onChangeText={setBrandAddress}
+                  editable={!isLoading}
+                />
+              </View>
+            </>
+          )}
 
           <View style={styles.inputContainer}>
             <Ionicons name="lock-closed-outline" size={20} color={ShopFlareColors.textLight} style={styles.inputIcon} />
@@ -163,7 +287,9 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Create Account</Text>
+              <Text style={styles.buttonText}>
+                {isBrandRegistration ? 'Register Brand' : 'Create Account'}
+              </Text>
             )}
           </TouchableOpacity>
 
@@ -225,9 +351,49 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
     fontSize: 14,
     color: ShopFlareColors.textSecondary,
+  },
+  segmentedContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F0F0F0',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 24,
+    position: 'relative',
+  },
+  segmentedSlider: {
+    position: 'absolute',
+    top: 4,
+    bottom: 4,
+    width: '48%',
+    backgroundColor: ShopFlareColors.primary,
+    borderRadius: 10,
+    shadowColor: ShopFlareColors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  segmentedButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    zIndex: 1,
+  },
+  segmentedIcon: {
+    marginRight: 6,
+  },
+  segmentedText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: ShopFlareColors.textLight,
+  },
+  segmentedTextActive: {
+    color: '#FFF',
   },
   row: {
     flexDirection: 'row',
@@ -247,6 +413,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  textAreaContainer: {
+    alignItems: 'flex-start',
+  },
   halfInput: {
     flex: 1,
   },
@@ -258,6 +427,10 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     color: ShopFlareColors.text,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   inputDisabled: {
     opacity: 0.6,

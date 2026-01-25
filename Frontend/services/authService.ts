@@ -2,15 +2,24 @@
 // For testing on physical device, replace 'localhost' with your machine's local IP (e.g., 192.168.x.x)
 const API_BASE_URL = 'http://192.168.0.98:8000/api';  // Change this to your actual machine IP if needed
 
+export type UserType = 'user' | 'brand';
+
 export interface User {
   id: number;
   username: string;
   email: string;
-  first_name: string;
-  last_name: string;
+  first_name?: string;
+  last_name?: string;
   phone_number?: string;
   bio?: string;
-  is_email_verified: boolean;
+  is_email_verified?: boolean;
+  user_type: UserType;
+  // Brand-specific fields (username is the brand name for brands)
+  brand_description?: string;
+  brand_logo?: string;
+  brand_website?: string;
+  brand_address?: string;
+  is_brand_verified?: boolean;
 }
 
 export interface AuthTokens {
@@ -19,12 +28,17 @@ export interface AuthTokens {
 }
 
 export interface RegisterData {
-  username: string;
+  username: string;  // For brands, this is the brand name
   email: string;
   password: string;
   password2: string;
   first_name?: string;
   last_name?: string;
+  user_type?: UserType;
+  // Brand-specific fields
+  brand_description?: string;
+  brand_website?: string;
+  brand_address?: string;
 }
 
 export interface LoginData {
@@ -38,9 +52,14 @@ export interface ChangePasswordData {
   new_password2: string;
 }
 
-// Register new user
+// Register new user or brand
 export const register = async (data: RegisterData): Promise<{ user: User; tokens: AuthTokens }> => {
-  const response = await fetch(`${API_BASE_URL}/auth/register/`, {
+  // Use different endpoint for brand registration
+  const endpoint = data.user_type === 'brand' 
+    ? `${API_BASE_URL}/auth/register/brand/`
+    : `${API_BASE_URL}/auth/register/`;
+  
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

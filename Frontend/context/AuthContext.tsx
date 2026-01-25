@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import * as authService from '../services/authService';
 import * as tokenStorage from '../services/tokenStorage';
 
+export type UserType = 'user' | 'brand';
+
 export interface User {
   id: number;
   username: string;
@@ -11,12 +13,21 @@ export interface User {
   phone_number?: string;
   bio?: string;
   is_email_verified: boolean;
+  user_type: UserType;
+  // Brand-specific fields
+  brand_name?: string;
+  brand_description?: string;
+  brand_logo?: string;
+  brand_website?: string;
+  brand_address?: string;
+  is_brand_verified?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isSignedIn: boolean;
+  isBrand: boolean;
   accessToken: string | null;
   refreshToken: string | null;
   
@@ -158,6 +169,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     user,
     isLoading,
     isSignedIn: !!user,
+    isBrand: user?.user_type === 'brand',
     accessToken,
     refreshToken,
     login,

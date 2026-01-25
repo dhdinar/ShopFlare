@@ -3,10 +3,53 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
 
 urlpatterns = [
+    # Auth endpoints
     path('register/', views.RegisterView.as_view(), name='register'),
+    path('register/brand/', views.BrandRegisterView.as_view(), name='register_brand'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
+    # Customer profile
     path('profile/', views.profile_view, name='profile'),
     path('profile/update/', views.update_profile_view, name='update_profile'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
+    # Brand profile
+    path('brand/profile/', views.brand_profile_view, name='brand_profile'),
+    path('brand/profile/update/', views.update_brand_profile_view, name='update_brand_profile'),
+    
+    # Product CRUD
+    path('products/', views.product_list_view, name='product_list'),
+    path('products/create/', views.product_create_view, name='product_create'),
+    path('products/<int:product_id>/', views.product_detail_view, name='product_detail'),
+    path('products/<int:product_id>/update/', views.product_update_view, name='product_update'),
+    path('products/<int:product_id>/delete/', views.product_delete_view, name='product_delete'),
+    
+    # Product images
+    path('products/images/<int:image_id>/delete/', views.product_image_delete_view, name='product_image_delete'),
+    
+    # Brand's products (public)
+    path('brands/<int:brand_id>/products/', views.brand_products_view, name='brand_products'),
+    
+    # Wishlist endpoints
+    path('wishlist/', views.wishlist_list_view, name='wishlist_list'),
+    path('wishlist/add/', views.wishlist_add_view, name='wishlist_add'),
+    path('wishlist/remove/<int:product_id>/', views.wishlist_remove_view, name='wishlist_remove'),
+    
+    # Cart endpoints
+    path('cart/', views.cart_list_view, name='cart_list'),
+    path('cart/add/', views.cart_add_view, name='cart_add'),
+    path('cart/update/<int:item_id>/', views.cart_update_view, name='cart_update'),
+    path('cart/remove/<int:item_id>/', views.cart_remove_view, name='cart_remove'),
+    path('cart/clear/', views.cart_clear_view, name='cart_clear'),
+    
+    # Review endpoints
+    path('products/<int:product_id>/reviews/', views.product_reviews_view, name='product_reviews'),
+    path('reviews/create/', views.review_create_view, name='review_create'),
+    path('reviews/<int:review_id>/delete/', views.review_delete_view, name='review_delete'),
+    path('reviews/my/', views.user_reviews_view, name='user_reviews'),
+
+    # Messaging endpoints
+    path('products/<int:product_id>/messages/', views.product_messages_view, name='product_messages'),
+    path('messages/send/', views.send_message_view, name='send_message'),
 ]

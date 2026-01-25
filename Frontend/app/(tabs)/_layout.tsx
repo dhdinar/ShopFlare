@@ -5,8 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { ShopFlareColors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 
 export default function TabLayout() {
+  const { user } = useAuth();
+  const isBrand = user?.user_type === 'brand';
+
   return (
     <Tabs
       screenOptions={{
@@ -31,6 +35,7 @@ export default function TabLayout() {
           fontWeight: '600',
         },
       }}>
+      {/* Home - visible to all */}
       <Tabs.Screen
         name="index"
         options={{
@@ -40,10 +45,13 @@ export default function TabLayout() {
           ),
         }}
       />
+      
+      {/* Customer tabs - Wishlist and Cart */}
       <Tabs.Screen
         name="wishlist"
         options={{
           title: 'Wishlist',
+          href: isBrand ? null : '/wishlist',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'heart' : 'heart-outline'} size={26} color={color} />
           ),
@@ -53,6 +61,7 @@ export default function TabLayout() {
         name="cart"
         options={{
           title: 'Cart',
+          href: isBrand ? null : '/cart',
           tabBarIcon: ({ color, focused }) => (
             <View style={styles.cartIconContainer}>
               <View style={[styles.cartIconBg, focused && styles.cartIconBgActive]}>
@@ -62,6 +71,30 @@ export default function TabLayout() {
           ),
         }}
       />
+      
+      {/* Brand tabs - Products and Orders */}
+      <Tabs.Screen
+        name="products"
+        options={{
+          title: 'Products',
+          href: isBrand ? '/products' : null,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'cube' : 'cube-outline'} size={26} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="orders"
+        options={{
+          title: 'Orders',
+          href: isBrand ? '/orders' : null,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={26} color={color} />
+          ),
+        }}
+      />
+      
+      {/* Chat - visible to all */}
       <Tabs.Screen
         name="chat"
         options={{
@@ -71,6 +104,8 @@ export default function TabLayout() {
           ),
         }}
       />
+      
+      {/* Profile - visible to all */}
       <Tabs.Screen
         name="profile"
         options={{

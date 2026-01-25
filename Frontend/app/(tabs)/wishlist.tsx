@@ -1,25 +1,59 @@
-import { StyleSheet, View, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { useState } from 'react';
+import { StyleSheet, View, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
+import { useFashion, Product } from '@/context/FashionContext';
 
-// Sample wishlist items
-const WISHLIST_ITEMS = [
-  { id: '1', name: 'Classic White Sneakers', price: 79.99, originalPrice: 129.99, image: '👟', rating: 4.8 },
-  { id: '2', name: 'Elegant Watch', price: 149.99, originalPrice: 249.99, image: '⌚', rating: 4.9 },
-  { id: '3', name: 'Summer T-Shirt', price: 29.99, originalPrice: 49.99, image: '👕', rating: 4.5 },
-  { id: '4', name: 'Wireless Earbuds', price: 59.99, originalPrice: 99.99, image: '🎧', rating: 4.7 },
-];
+// Category emojis for products without images
+const CATEGORY_EMOJIS: Record<string, string> = {
+  'Clothes': '👕',
+  'Electronics': '📱',
+  'Shoes': '👟',
+  'Watch': '⌚',
+  'Accessories': '🎧',
+  'default': '🛍️',
+};
 
 export default function WishlistScreen() {
   const router = useRouter();
-  const [wishlist, setWishlist] = useState(WISHLIST_ITEMS);
+  const { 
+    products, 
+    wishlist, 
+    toggleWishlist, 
+    addToCart, 
+    isLoadingProducts 
+  } = useFashion();
 
-  const removeFromWishlist = (id: string) => {
-    setWishlist(prev => prev.filter(item => item.id !== id));
+  // Get wishlisted products
+  const wishlistItems = products.filter(p => wishlist.includes(p.id));
+
+  const getProductEmoji = (category?: string) => {
+    if (!category) return CATEGORY_EMOJIS.default;
+    return CATEGORY_EMOJIS[category] || CATEGORY_EMOJIS.default;
+  };
+
+  const getProductImage = (product: Product) => {
+    if (product.images && product.images.length > 0 && product.images[0].image_base64) {
+      return `data:${product.images[0].image_type};base64,${product.images[0].image_base64}`;
+    }
+    if (product.image) {
+      return product.image;
+    }
+    return null;
+  };
+
+  const handleAddToCart = (product: Product) => {
+    const defaultSize = product.sizes?.[0] || 'M';
+    const defaultColor = product.colors?.[0] || 'Black';
+    addToCart(product, defaultSize, defaultColor, 1);
+    // Remove from wishlist after adding to cart
+    toggleWishlist(product.id);
+  };
+
+  const handleRemoveFromWishlist = (productId: string) => {
+    toggleWishlist(productId);
   };
 
   return (
@@ -27,10 +61,15 @@ export default function WishlistScreen() {
       {/* Header */}
       <View style={styles.header}>
         <ThemedText style={styles.headerTitle}>My Wishlist</ThemedText>
-        <ThemedText style={styles.itemCount}>{wishlist.length} items</ThemedText>
+        <ThemedText style={styles.itemCount}>{wishlistItems.length} items</ThemedText>
       </View>
 
-      {wishlist.length === 0 ? (
+      {isLoadingProducts ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={ShopFlareColors.primary} />
+          <ThemedText style={styles.loadingText}>Loading wishlist...</ThemedText>
+        </View>
+      ) : wishlistItems.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="heart-outline" size={80} color="#DDD" />
           <ThemedText style={styles.emptyTitle}>Your wishlist is empty</ThemedText>
@@ -41,32 +80,61 @@ export default function WishlistScreen() {
         </View>
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.listContainer}>
-          {wishlist.map((item) => (
-            <View key={item.id} style={styles.wishlistCard}>
-              <View style={styles.productImage}>
-                <ThemedText style={styles.productEmoji}>{item.image}</ThemedText>
-              </View>
-              <View style={styles.productInfo}>
-                <ThemedText style={styles.productName} numberOfLines={2}>{item.name}</ThemedText>
-                <View style={styles.ratingRow}>
-                  <Ionicons name="star" size={14} color="#FFD700" />
-                  <ThemedText style={styles.ratingText}>{item.rating}</ThemedText>
+          {wishlistItems.map((item) => {
+            const imageUrl = getProductImage(item);
+            return (
+              <TouchableOpacity 
+                key={item.id} 
+                style={styles.wishlistCard}
+                onPress={() => router.push(`/productDetail?id=${item.id}`)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.productImageContainer}>
+                  {imageUrl ? (
+                    <Image source={{ uri: imageUrl }} style={styles.productImageStyle} resizeMode="cover" />
+                  ) : (
+                    <ThemedText style={styles.productEmoji}>{getProductEmoji(item.category)}</ThemedText>
+                  )}
                 </View>
-                <View style={styles.priceRow}>
-                  <ThemedText style={styles.price}>${item.price}</ThemedText>
-                  <ThemedText style={styles.originalPrice}>${item.originalPrice}</ThemedText>
+                <View style={styles.productInfo}>
+                  <ThemedText style={styles.productName} numberOfLines={2}>{item.name}</ThemedText>
+                  {item.brand_name && (
+                    <ThemedText style={styles.brandName}>{item.brand_name}</ThemedText>
+                  )}
+                  <View style={styles.ratingRow}>
+                    <Ionicons name="star" size={14} color="#FFD700" />
+                    <ThemedText style={styles.ratingText}>{item.rating ? parseFloat(String(item.rating)).toFixed(1) : '4.5'}</ThemedText>
+                  </View>
+                  <View style={styles.priceRow}>
+                    <ThemedText style={styles.price}>${parseFloat(String(item.price)).toFixed(2)}</ThemedText>
+                    {item.originalPrice && (
+                      <ThemedText style={styles.originalPrice}>${parseFloat(String(item.originalPrice)).toFixed(2)}</ThemedText>
+                    )}
+                  </View>
                 </View>
-              </View>
-              <View style={styles.actions}>
-                <TouchableOpacity style={styles.cartButton}>
-                  <Ionicons name="bag-add-outline" size={20} color="#FFF" />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.removeButton} onPress={() => removeFromWishlist(item.id)}>
-                  <Ionicons name="trash-outline" size={20} color={ShopFlareColors.primary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
+                <View style={styles.actions}>
+                  <TouchableOpacity 
+                    style={styles.cartButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleAddToCart(item);
+                    }}
+                  >
+                    <Ionicons name="bag-add-outline" size={20} color="#FFF" />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.removeButton} 
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleRemoveFromWishlist(item.id);
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={ShopFlareColors.primary} />
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       )}
     </ThemedView>
@@ -85,16 +153,27 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.primary,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1A1A1A',
+    color: '#FFFFFF',
   },
   itemCount: {
     fontSize: 14,
-    color: '#999',
+    color: '#FFFFFF',
+    opacity: 0.9,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    color: '#666',
+    fontSize: 14,
   },
   emptyContainer: {
     flex: 1,
@@ -141,13 +220,18 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  productImage: {
+  productImageContainer: {
     width: 80,
     height: 80,
     borderRadius: 12,
     backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  productImageStyle: {
+    width: '100%',
+    height: '100%',
   },
   productEmoji: {
     fontSize: 40,
@@ -161,6 +245,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1A1A1A',
+  },
+  brandName: {
+    fontSize: 12,
+    color: ShopFlareColors.primary,
+    marginTop: 2,
   },
   ratingRow: {
     flexDirection: 'row',

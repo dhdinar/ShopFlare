@@ -1,49 +1,75 @@
-import { StyleSheet, View, ScrollView, TouchableOpacity } from 'react-native';
-import { useState } from 'react';
+import { StyleSheet, View, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
+import { useFashion, CartItem } from '@/context/FashionContext';
 
-// Sample cart items
-const CART_ITEMS = [
-  { id: '1', name: 'Classic White Sneakers', price: 79.99, image: '👟', quantity: 1, size: 'US 10', color: 'White' },
-  { id: '2', name: 'Elegant Watch', price: 149.99, image: '⌚', quantity: 1, size: 'One Size', color: 'Silver' },
-  { id: '3', name: 'Summer T-Shirt', price: 29.99, image: '👕', quantity: 2, size: 'L', color: 'Black' },
-];
+// Category emojis for products without images
+const CATEGORY_EMOJIS: Record<string, string> = {
+  'Clothes': '👕',
+  'Electronics': '📱',
+  'Shoes': '👟',
+  'Watch': '⌚',
+  'Accessories': '🎧',
+  'default': '🛍️',
+};
 
 export default function CartScreen() {
   const router = useRouter();
-  const [cart, setCart] = useState(CART_ITEMS);
+  const { 
+    cart, 
+    removeFromCart, 
+    updateCartItemQuantity, 
+    getTotalPrice,
+    getCartItemCount,
+    isLoadingProducts 
+  } = useFashion();
 
-  const updateQuantity = (id: string, change: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.id === id) {
-        const newQuantity = Math.max(1, item.quantity + change);
-        return { ...item, quantity: newQuantity };
-      }
-      return item;
-    }));
+  const getProductEmoji = (category?: string) => {
+    if (!category) return CATEGORY_EMOJIS.default;
+    return CATEGORY_EMOJIS[category] || CATEGORY_EMOJIS.default;
   };
 
-  const removeFromCart = (id: string) => {
-    setCart(prev => prev.filter(item => item.id !== id));
+  const getProductImage = (item: CartItem) => {
+    if (item.images && item.images.length > 0 && item.images[0].image_base64) {
+      return `data:${item.images[0].image_type};base64,${item.images[0].image_base64}`;
+    }
+    if (item.image) {
+      return item.image;
+    }
+    return null;
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const handleUpdateQuantity = (productId: string, change: number, currentQuantity: number) => {
+    const newQuantity = currentQuantity + change;
+    if (newQuantity <= 0) {
+      removeFromCart(productId);
+    } else {
+      updateCartItemQuantity(productId, newQuantity);
+    }
+  };
+
+  const subtotal = getTotalPrice();
   const shipping = subtotal > 100 ? 0 : 9.99;
   const total = subtotal + shipping;
+  const totalItems = getCartItemCount();
 
   return (
     <ThemedView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <ThemedText style={styles.headerTitle}>My Cart</ThemedText>
-        <ThemedText style={styles.itemCount}>{cart.length} items</ThemedText>
+        <ThemedText style={styles.itemCount}>{totalItems} items</ThemedText>
       </View>
 
-      {cart.length === 0 ? (
+      {isLoadingProducts ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={ShopFlareColors.primary} />
+          <ThemedText style={styles.loadingText}>Loading cart...</ThemedText>
+        </View>
+      ) : cart.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="bag-outline" size={80} color="#DDD" />
           <ThemedText style={styles.emptyTitle}>Your cart is empty</ThemedText>
@@ -55,38 +81,62 @@ export default function CartScreen() {
       ) : (
         <>
           <ScrollView showsVerticalScrollIndicator={false} style={styles.listContainer}>
-            {cart.map((item) => (
-              <View key={item.id} style={styles.cartCard}>
-                <View style={styles.productImage}>
-                  <ThemedText style={styles.productEmoji}>{item.image}</ThemedText>
-                </View>
-                <View style={styles.productInfo}>
-                  <ThemedText style={styles.productName} numberOfLines={2}>{item.name}</ThemedText>
-                  <ThemedText style={styles.productVariant}>{item.size} • {item.color}</ThemedText>
-                  <ThemedText style={styles.price}>${item.price}</ThemedText>
-                </View>
-                <View style={styles.actions}>
-                  <TouchableOpacity style={styles.removeBtn} onPress={() => removeFromCart(item.id)}>
-                    <Ionicons name="trash-outline" size={18} color="#999" />
-                  </TouchableOpacity>
-                  <View style={styles.quantityContainer}>
-                    <TouchableOpacity 
-                      style={styles.quantityBtn} 
-                      onPress={() => updateQuantity(item.id, -1)}
-                    >
-                      <Ionicons name="remove" size={16} color="#666" />
-                    </TouchableOpacity>
-                    <ThemedText style={styles.quantity}>{item.quantity}</ThemedText>
-                    <TouchableOpacity 
-                      style={[styles.quantityBtn, styles.quantityBtnPlus]} 
-                      onPress={() => updateQuantity(item.id, 1)}
-                    >
-                      <Ionicons name="add" size={16} color="#FFF" />
-                    </TouchableOpacity>
+            {cart.map((item) => {
+              const imageUrl = getProductImage(item);
+              return (
+                <TouchableOpacity 
+                  key={`${item.id}-${item.selectedSize}-${item.selectedColor}`} 
+                  style={styles.cartCard}
+                  onPress={() => router.push(`/productDetail?id=${item.id}`)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.productImageContainer}>
+                    {imageUrl ? (
+                      <Image source={{ uri: imageUrl }} style={styles.productImageStyle} resizeMode="cover" />
+                    ) : (
+                      <ThemedText style={styles.productEmoji}>{getProductEmoji(item.category)}</ThemedText>
+                    )}
                   </View>
-                </View>
-              </View>
-            ))}
+                  <View style={styles.productInfo}>
+                    <ThemedText style={styles.productName} numberOfLines={2}>{item.name}</ThemedText>
+                    <ThemedText style={styles.productVariant}>{item.selectedSize} • {item.selectedColor}</ThemedText>
+                    <ThemedText style={styles.price}>${parseFloat(String(item.price)).toFixed(2)}</ThemedText>
+                  </View>
+                  <View style={styles.actions}>
+                    <TouchableOpacity 
+                      style={styles.removeBtn} 
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        removeFromCart(item.id);
+                      }}
+                    >
+                      <Ionicons name="trash-outline" size={18} color="#999" />
+                    </TouchableOpacity>
+                    <View style={styles.quantityContainer}>
+                      <TouchableOpacity 
+                        style={styles.quantityBtn} 
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleUpdateQuantity(item.id, -1, item.quantity);
+                        }}
+                      >
+                        <Ionicons name="remove" size={16} color="#666" />
+                      </TouchableOpacity>
+                      <ThemedText style={styles.quantity}>{item.quantity}</ThemedText>
+                      <TouchableOpacity 
+                        style={[styles.quantityBtn, styles.quantityBtnPlus]} 
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleUpdateQuantity(item.id, 1, item.quantity);
+                        }}
+                      >
+                        <Ionicons name="add" size={16} color="#FFF" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
             
             {/* Promo Code */}
             <View style={styles.promoContainer}>
@@ -142,16 +192,27 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.primary,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1A1A1A',
+    color: '#FFFFFF',
   },
   itemCount: {
     fontSize: 14,
-    color: '#999',
+    color: '#FFFFFF',
+    opacity: 0.9,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    color: '#666',
+    fontSize: 14,
   },
   emptyContainer: {
     flex: 1,
@@ -198,13 +259,18 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  productImage: {
+  productImageContainer: {
     width: 80,
     height: 80,
     borderRadius: 12,
     backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  productImageStyle: {
+    width: '100%',
+    height: '100%',
   },
   productEmoji: {
     fontSize: 40,
