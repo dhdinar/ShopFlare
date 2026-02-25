@@ -247,9 +247,9 @@ export default function ProductDetailScreen() {
 
   const getProductImages = () => {
     if (product?.images && product.images.length > 0) {
-      return product.images.map(img => 
-        `data:${img.image_type};base64,${img.image_base64}`
-      );
+      return product.images
+        .filter(img => img.image_base64 && img.image_type)
+        .map(img => `data:${img.image_type};base64,${img.image_base64}`);
     }
     if (product?.image) {
       return [product.image];
@@ -334,7 +334,7 @@ export default function ProductDetailScreen() {
                 }}
                 renderItem={({ item }) => (
                   <Image 
-                    source={item} 
+                    source={{ uri: item }} 
                     style={[styles.productImage, { width: SCREEN_WIDTH }]}
                     contentFit="cover"
                   />
@@ -723,8 +723,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   productImage: {
-    width: '100%',
-    height: '100%',
+    height: 320,
   },
   imagePlaceholder: {
     fontSize: 120,
