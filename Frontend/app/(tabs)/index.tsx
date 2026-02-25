@@ -1,4 +1,5 @@
-import { StyleSheet, TouchableOpacity, View, ScrollView, TextInput, Dimensions, Image, ActivityIndicator } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, ScrollView, TextInput, Dimensions, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import { ThemedText } from '@/components/themed-text';
@@ -210,9 +211,9 @@ export default function HomeScreen() {
             {SPECIAL_OFFERS.map((offer, index) => (
               <TouchableOpacity key={offer.id} style={styles.offerCard}>
                 <Image
-                  source={{ uri: offer.image }}
+                  source={offer.image}
                   style={styles.offerImage}
-                  resizeMode="cover"
+                  contentFit="cover"
                 />
                 <View style={styles.offerOverlay}>
                   <View style={styles.limitedBadge}>
@@ -325,7 +326,7 @@ export default function HomeScreen() {
                   >
                     <View style={styles.productImageContainer}>
                       {imageUrl ? (
-                        <Image source={{ uri: imageUrl }} style={styles.productImage} resizeMode="cover" />
+                        <Image source={imageUrl} style={styles.productImage} contentFit="cover" />
                       ) : (
                         <ThemedText style={styles.productEmoji}>{getProductEmoji(product.category)}</ThemedText>
                       )}

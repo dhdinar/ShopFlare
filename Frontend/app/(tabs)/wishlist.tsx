@@ -1,4 +1,5 @@
-import { StyleSheet, View, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
@@ -91,7 +92,7 @@ export default function WishlistScreen() {
               >
                 <View style={styles.productImageContainer}>
                   {imageUrl ? (
-                    <Image source={{ uri: imageUrl }} style={styles.productImageStyle} resizeMode="cover" />
+                    <Image source={imageUrl} style={styles.productImageStyle} contentFit="cover" />
                   ) : (
                     <ThemedText style={styles.productEmoji}>{getProductEmoji(item.category)}</ThemedText>
                   )}

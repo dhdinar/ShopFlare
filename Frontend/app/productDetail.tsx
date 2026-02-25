@@ -1,4 +1,5 @@
-import { StyleSheet, View, ScrollView, TouchableOpacity, TextInput, FlatList, Image, ActivityIndicator, Alert, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, TextInput, FlatList, ActivityIndicator, Alert, Dimensions, NativeSyntheticEvent, NativeScrollEvent, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import { ThemedText } from '@/components/themed-text';
@@ -333,9 +334,9 @@ export default function ProductDetailScreen() {
                 }}
                 renderItem={({ item }) => (
                   <Image 
-                    source={{ uri: item }} 
+                    source={item} 
                     style={[styles.productImage, { width: SCREEN_WIDTH }]}
-                    resizeMode="cover"
+                    contentFit="cover"
                   />
                 )}
               />

@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View, TouchableOpacity, Alert, ScrollView, TextInput, Modal, FlatList, ActivityIndicator, Image } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, ScrollView, TextInput, Modal, FlatList, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { ThemedText } from '@/components/themed-text';
@@ -369,7 +370,7 @@ export default function ProductsScreen() {
             <View style={styles.imagePickerContainer}>
               {selectedImages.map((img, index) => (
                 <View key={index} style={styles.imagePreviewContainer}>
-                  <Image source={{ uri: img.uri }} style={styles.imagePreview} />
+                  <Image source={img.uri} style={styles.imagePreview} contentFit="cover" />
                   <TouchableOpacity 
                     style={styles.removeImageBtn}
                     onPress={() => removeImage(index)}
