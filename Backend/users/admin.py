@@ -5,8 +5,8 @@ from .models import CustomUser, Brand, Product, ProductImage, Wishlist, CartItem
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
-    # CustomUser fields: id, username, email, phone_number, bio, is_email_verified + AbstractUser fields
-    list_display = ['id', 'username', 'email', 'phone_number', 'bio', 'is_email_verified', 'is_active', 'is_staff', 'date_joined']
+    # CustomUser fields: id, username, email, first_name, last_name, phone_number, bio, is_email_verified + AbstractUser fields
+    list_display = ['id', 'username', 'email', 'first_name', 'last_name', 'phone_number', 'bio', 'is_email_verified', 'is_active', 'is_staff', 'date_joined']
     list_filter = ['is_email_verified', 'is_active', 'is_staff', 'date_joined']
     search_fields = ['username', 'email', 'first_name', 'last_name', 'phone_number']
     ordering = ['-date_joined']
@@ -22,7 +22,7 @@ class CustomUserAdmin(UserAdmin):
 @admin.register(Brand)
 class BrandAdmin(admin.ModelAdmin):
     # Brand fields: id, username, email, password, phone_number, brand_description, brand_logo, brand_website, brand_address, is_brand_verified, is_active, created_at, updated_at
-    list_display = ['id', 'username', 'email', 'phone_number', 'brand_logo', 'brand_website', 'brand_address', 'is_brand_verified', 'is_active', 'created_at', 'updated_at']
+    list_display = ['id', 'username', 'email', 'phone_number', 'brand_description', 'brand_logo', 'brand_website', 'brand_address', 'is_brand_verified', 'is_active', 'created_at', 'updated_at']
     list_filter = ['is_brand_verified', 'is_active', 'created_at']
     search_fields = ['username', 'email', 'phone_number', 'brand_description', 'brand_address']
     readonly_fields = ['created_at', 'updated_at']
@@ -39,7 +39,7 @@ class BrandAdmin(admin.ModelAdmin):
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     # Product fields: id, brand, name, description, price, sale_price, category, image, stock, is_active, created_at, updated_at
-    list_display = ['id', 'name', 'brand', 'price', 'sale_price', 'category', 'image', 'stock', 'is_active', 'created_at', 'updated_at']
+    list_display = ['id', 'name', 'brand', 'short_description', 'price', 'sale_price', 'category', 'image', 'stock', 'is_active', 'created_at', 'updated_at']
     list_filter = ['is_active', 'category', 'brand', 'created_at']
     search_fields = ['name', 'description', 'brand__username', 'category']
     readonly_fields = ['created_at', 'updated_at']
@@ -51,6 +51,12 @@ class ProductAdmin(admin.ModelAdmin):
         ('Inventory', {'fields': ('stock', 'is_active')}),
         ('Timestamps', {'fields': ('created_at', 'updated_at')}),
     )
+    
+    def short_description(self, obj):
+        if obj.description:
+            return obj.description[:50] + '...' if len(obj.description) > 50 else obj.description
+        return '-'
+    short_description.short_description = 'Description'
 
 
 @admin.register(ProductImage)
