@@ -322,24 +322,25 @@ export default function ProductDetailScreen() {
         <View style={styles.imageContainer}>
           {productImages.length > 0 ? (
             <>
-              <FlatList
-                data={productImages}
+              <ScrollView
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
-                keyExtractor={(_, index) => index.toString()}
                 onMomentumScrollEnd={(event: NativeSyntheticEvent<NativeScrollEvent>) => {
                   const index = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
                   setCurrentImageIndex(index);
                 }}
-                renderItem={({ item }) => (
+                style={{ width: SCREEN_WIDTH }}
+              >
+                {productImages.map((item, index) => (
                   <Image 
+                    key={index}
                     source={{ uri: item }} 
                     style={[styles.productImage, { width: SCREEN_WIDTH }]}
                     contentFit="cover"
                   />
-                )}
-              />
+                ))}
+              </ScrollView>
               {productImages.length > 1 && (
                 <View style={styles.imagePagination}>
                   {productImages.map((_, index) => (
