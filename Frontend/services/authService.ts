@@ -1,6 +1,5 @@
 // API configuration and service functions
-// For testing on physical device, replace 'localhost' with your machine's local IP (e.g., 192.168.x.x)
-const API_BASE_URL = 'http://192.168.0.98:8000/api';  // Change this to your actual machine IP if needed
+const API_BASE_URL = 'https://shopflare-api.onrender.com/api';
 
 export type UserType = 'user' | 'brand';
 

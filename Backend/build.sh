@@ -10,3 +10,14 @@ python manage.py collectstatic --no-input
 
 # Run migrations
 python manage.py migrate
+
+# Create superuser if it doesn't exist
+python manage.py shell << EOF
+from django.contrib.auth import get_user_model
+User = get_user_model()
+if not User.objects.filter(username='dinarr').exists():
+    User.objects.create_superuser('dinarr', 'dhdinar63@gmail.com', '#Dinar11')
+    print('Superuser created!')
+else:
+    print('Superuser already exists.')
+EOF
