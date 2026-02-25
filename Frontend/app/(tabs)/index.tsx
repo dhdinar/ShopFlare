@@ -161,7 +161,7 @@ export default function HomeScreen() {
               <ThemedText style={styles.appName}>ShopFlare</ThemedText>
               <TouchableOpacity style={styles.locationContainer}>
                 <Ionicons name="location-outline" size={16} color="#FFF" />
-                <ThemedText style={styles.locationText}>New York, USA</ThemedText>
+                <ThemedText style={styles.locationText}>Dhaka, Bangladesh</ThemedText>
                 <Ionicons name="chevron-down" size={16} color="#FFF" />
               </TouchableOpacity>
             </View>
