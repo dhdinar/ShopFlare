@@ -27,7 +27,6 @@ services:
 
   - type: web
     name: shopflare-web
-    plan: free
     runtime: static
     rootDir: Frontend
     buildCommand: "npm install && npm run build:web"
