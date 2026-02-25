@@ -9,6 +9,7 @@ services:
     name: shopflare-api
     plan: free
     runtime: python
+    rootDir: Backend
     buildCommand: "./build.sh"
     startCommand: "gunicorn auth.wsgi:application"
     envVars:
