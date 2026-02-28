@@ -49,12 +49,18 @@ class RegisterSerializer(serializers.ModelSerializer):
         }
     
     def validate_username(self, value):
+        # Check if username exists in User model (case-insensitive)
+        if User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError("This username is already taken.")
         # Check if username exists in Brand model
         if Brand.objects.filter(username__iexact=value).exists():
             raise serializers.ValidationError("This username is already taken.")
         return value
     
     def validate_email(self, value):
+        # Check if email exists in User model (case-insensitive)
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("This email is already registered.")
         # Check if email exists in Brand model
         if Brand.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError("This email is already registered.")
@@ -88,12 +94,18 @@ class BrandRegisterSerializer(serializers.ModelSerializer):
         }
     
     def validate_username(self, value):
+        # Check if username exists in Brand model (case-insensitive)
+        if Brand.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError("This username is already taken.")
         # Check if username exists in User model
         if User.objects.filter(username__iexact=value).exists():
             raise serializers.ValidationError("This username is already taken.")
         return value
     
     def validate_email(self, value):
+        # Check if email exists in Brand model (case-insensitive)
+        if Brand.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("This email is already registered.")
         # Check if email exists in User model
         if User.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError("This email is already registered.")
