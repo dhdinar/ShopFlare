@@ -48,6 +48,18 @@ class RegisterSerializer(serializers.ModelSerializer):
             'last_name': {'required': False},
         }
     
+    def validate_username(self, value):
+        # Check if username exists in Brand model
+        if Brand.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError("This username is already taken.")
+        return value
+    
+    def validate_email(self, value):
+        # Check if email exists in Brand model
+        if Brand.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("This email is already registered.")
+        return value
+    
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({"password": "Password fields didn't match."})
@@ -74,6 +86,18 @@ class BrandRegisterSerializer(serializers.ModelSerializer):
             'brand_website': {'required': False},
             'brand_address': {'required': False},
         }
+    
+    def validate_username(self, value):
+        # Check if username exists in User model
+        if User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError("This username is already taken.")
+        return value
+    
+    def validate_email(self, value):
+        # Check if email exists in User model
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("This email is already registered.")
+        return value
     
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
