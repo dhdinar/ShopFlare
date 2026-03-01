@@ -52,4 +52,7 @@ urlpatterns = [
     # Messaging endpoints
     path('products/<int:product_id>/messages/', views.product_messages_view, name='product_messages'),
     path('messages/send/', views.send_message_view, name='send_message'),
+
+    # Health check
+    path('health/', views.health, name='health'),
 ]

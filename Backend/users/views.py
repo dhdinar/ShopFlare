@@ -9,6 +9,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 import base64
 
+
 from .serializers import (UserSerializer, BrandSerializer, RegisterSerializer, 
                           BrandRegisterSerializer, LoginSerializer, 
                           ProductSerializer, ProductCreateUpdateSerializer,
@@ -749,3 +750,8 @@ def send_message_view(request):
     msg.save()
     return Response(MessageSerializer(msg).data, status=201)
 
+
+from django.http import HttpResponse
+
+def health(request):
+    return HttpResponse("OK")
