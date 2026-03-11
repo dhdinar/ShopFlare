@@ -10,13 +10,14 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 import base64
 
 
-from .serializers import (UserSerializer, BrandSerializer, RegisterSerializer, 
-                          BrandRegisterSerializer, LoginSerializer, 
+from .serializers import (UserSerializer, BrandSerializer, RegisterSerializer,
+                          BrandRegisterSerializer, LoginSerializer,
                           ProductSerializer, ProductCreateUpdateSerializer,
                           ProductImageSerializer, WishlistSerializer, CartItemSerializer,
                           ReviewSerializer, ReviewCreateSerializer,
-                          MessageSerializer, AddressSerializer, ChangePasswordSerializer)
-from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address
+                          MessageSerializer, AddressSerializer, ChangePasswordSerializer,
+                          OrderSerializer, CheckoutSerializer, OrderStatusUpdateSerializer)
+from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address, Order, OrderItem
 from .authentication import BrandUser
 
 User = get_user_model()
@@ -896,3 +897,186 @@ def brand_analytics_view(request):
 
 def health(request):
     return HttpResponse("OK")
+
+
+# ==================== Checkout / Order Views ====================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def checkout_view(request):
+    """Place an order from the user's current cart"""
+    serializer = CheckoutSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    data = serializer.validated_data
+
+    # Resolve shipping address
+    address_id = data.get('address_id')
+    if address_id:
+        try:
+            addr = Address.objects.get(id=address_id, user=request.user)
+        except Address.DoesNotExist:
+            return Response({'detail': 'Address not found'}, status=status.HTTP_404_NOT_FOUND)
+        shipping = {
+            'shipping_full_name': addr.full_name,
+            'shipping_phone': addr.phone or '',
+            'shipping_address_line1': addr.address_line1,
+            'shipping_address_line2': addr.address_line2 or '',
+            'shipping_city': addr.city,
+            'shipping_state': addr.state or '',
+            'shipping_postal_code': addr.postal_code or '',
+            'shipping_country': addr.country,
+        }
+    else:
+        shipping = {
+            'shipping_full_name': data.get('shipping_full_name', ''),
+            'shipping_phone': data.get('shipping_phone', ''),
+            'shipping_address_line1': data.get('shipping_address_line1', ''),
+            'shipping_address_line2': data.get('shipping_address_line2', ''),
+            'shipping_city': data.get('shipping_city', ''),
+            'shipping_state': data.get('shipping_state', ''),
+            'shipping_postal_code': data.get('shipping_postal_code', ''),
+            'shipping_country': data.get('shipping_country', ''),
+        }
+
+    cart_items = CartItem.objects.filter(user=request.user).select_related('product')
+    if not cart_items.exists():
+        return Response({'detail': 'Cart is empty'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Check stock availability
+    for item in cart_items:
+        if item.product.stock < item.quantity:
+            return Response(
+                {'detail': f'Insufficient stock for "{item.product.name}". Available: {item.product.stock}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    # Calculate totals
+    from decimal import Decimal
+    SHIPPING_COST = Decimal('0.00')  # Free shipping by default; customise as needed
+    subtotal = sum(
+        (item.product.sale_price if item.product.is_on_sale else item.product.price) * item.quantity
+        for item in cart_items
+    )
+    total_amount = subtotal + SHIPPING_COST
+
+    # Create the order
+    order = Order.objects.create(
+        user=request.user,
+        payment_method=data.get('payment_method', 'cod'),
+        notes=data.get('notes', ''),
+        subtotal=subtotal,
+        shipping_cost=SHIPPING_COST,
+        total_amount=total_amount,
+        **shipping
+    )
+
+    # Create order items and deduct stock
+    for item in cart_items:
+        unit_price = item.product.sale_price if item.product.is_on_sale else item.product.price
+        OrderItem.objects.create(
+            order=order,
+            product=item.product,
+            brand=item.product.brand,
+            product_name=item.product.name,
+            product_price=unit_price,
+            quantity=item.quantity,
+            selected_size=item.selected_size,
+            selected_color=item.selected_color,
+        )
+        # Deduct stock
+        item.product.stock -= item.quantity
+        item.product.save(update_fields=['stock'])
+
+    # Clear the cart
+    cart_items.delete()
+
+    return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def order_list_view(request):
+    """List all orders for the current user"""
+    orders = Order.objects.filter(user=request.user).prefetch_related('items')
+    serializer = OrderSerializer(orders, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def order_detail_view(request, order_id):
+    """Get a specific order's details"""
+    try:
+        order = Order.objects.prefetch_related('items').get(id=order_id, user=request.user)
+    except Order.DoesNotExist:
+        return Response({'detail': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+    return Response(OrderSerializer(order).data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def order_cancel_view(request, order_id):
+    """Cancel a pending order (customer)"""
+    try:
+        order = Order.objects.get(id=order_id, user=request.user)
+    except Order.DoesNotExist:
+        return Response({'detail': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if order.status not in ('pending', 'confirmed'):
+        return Response(
+            {'detail': f'Cannot cancel an order with status "{order.status}"'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Restore stock
+    for item in order.items.select_related('product'):
+        if item.product:
+            item.product.stock += item.quantity
+            item.product.save(update_fields=['stock'])
+
+    order.status = 'cancelled'
+    order.save(update_fields=['status', 'updated_at'])
+    return Response(OrderSerializer(order).data)
+
+
+# ---- Brand-side order views ----
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def brand_orders_view(request):
+    """List all orders that contain this brand's products"""
+    brand = get_brand_from_token(request)
+    if not brand:
+        return Response({'detail': 'Brand authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    # Orders that have at least one item belonging to this brand
+    orders = (
+        Order.objects
+        .filter(items__brand=brand)
+        .prefetch_related('items')
+        .distinct()
+        .order_by('-created_at')
+    )
+    serializer = OrderSerializer(orders, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def brand_order_status_update_view(request, order_id):
+    """Brand updates the status of an order that contains their products"""
+    brand = get_brand_from_token(request)
+    if not brand:
+        return Response({'detail': 'Brand authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    # Ensure at least one item in this order belongs to this brand
+    if not Order.objects.filter(id=order_id, items__brand=brand).exists():
+        return Response({'detail': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = OrderStatusUpdateSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    order = Order.objects.get(id=order_id)
+    order.status = serializer.validated_data['status']
+    order.save(update_fields=['status', 'updated_at'])
+    return Response(OrderSerializer(order).data)

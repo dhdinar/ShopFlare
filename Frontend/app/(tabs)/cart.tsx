@@ -170,7 +170,7 @@ export default function CartScreen() {
               <ThemedText style={styles.totalLabel}>Total</ThemedText>
               <ThemedText style={styles.totalValue}>${total.toFixed(2)}</ThemedText>
             </View>
-            <TouchableOpacity style={styles.checkoutButton}>
+            <TouchableOpacity style={styles.checkoutButton} onPress={() => router.push('/checkout')}>
               <ThemedText style={styles.checkoutButtonText}>Proceed to Checkout</ThemedText>
               <Ionicons name="arrow-forward" size={20} color="#FFF" />
             </TouchableOpacity>

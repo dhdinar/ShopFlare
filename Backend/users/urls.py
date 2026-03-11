@@ -65,6 +65,16 @@ urlpatterns = [
     # Brand analytics
     path('brand/analytics/', views.brand_analytics_view, name='brand_analytics'),
 
+    # Checkout & Orders (customer)
+    path('checkout/', views.checkout_view, name='checkout'),
+    path('orders/', views.order_list_view, name='order_list'),
+    path('orders/<int:order_id>/', views.order_detail_view, name='order_detail'),
+    path('orders/<int:order_id>/cancel/', views.order_cancel_view, name='order_cancel'),
+
+    # Orders (brand)
+    path('brand/orders/', views.brand_orders_view, name='brand_orders'),
+    path('brand/orders/<int:order_id>/status/', views.brand_order_status_update_view, name='brand_order_status'),
+
     # Health check
     path('health/', views.health, name='health'),
 ]

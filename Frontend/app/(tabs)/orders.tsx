@@ -1,36 +1,39 @@
-import { StyleSheet, View, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useEffect } from 'react';
-
-// Mock order data - replace with actual API later
-interface Order {
-  id: string;
-  orderNumber: string;
-  customerName: string;
-  productName: string;
-  quantity: number;
-  total: number;
-  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
-  date: string;
-}
-
-const mockOrders: Order[] = [
-  // Empty for now - will be populated from API
-];
+import { ShopFlareColors } from '@/constants/theme';
+import { useState, useEffect, useCallback } from 'react';
+import { getOrders, getBrandOrders, cancelOrder, updateOrderStatus, Order } from '@/services/orderService';
 
 export default function OrdersScreen() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const router = useRouter();
-  
-  const [orders, setOrders] = useState<Order[]>(mockOrders);
+
+  const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
-  
+
   const isBrand = user?.user_type === 'brand';
+
+  useEffect(() => {
+    if (accessToken) fetchOrders();
+  }, [accessToken]);
+
+  const fetchOrders = useCallback(async () => {
+    if (!accessToken) return;
+    setIsLoading(true);
+    try {
+      const data = isBrand ? await getBrandOrders(accessToken) : await getOrders(accessToken);
+      setOrders(data);
+    } catch (err) {
+      console.error('Failed to fetch orders:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [accessToken, isBrand]);
 
   const filters = [
     { key: 'all', label: 'All' },
@@ -38,42 +41,160 @@ export default function OrdersScreen() {
     { key: 'confirmed', label: 'Confirmed' },
     { key: 'shipped', label: 'Shipped' },
     { key: 'delivered', label: 'Delivered' },
+    { key: 'cancelled', label: 'Cancelled' },
   ];
 
-  const getStatusColor = (status: Order['status']) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return '#FFA726';
       case 'confirmed': return '#42A5F5';
+      case 'processing': return '#AB47BC';
       case 'shipped': return '#7E57C2';
       case 'delivered': return '#66BB6A';
       case 'cancelled': return '#EF5350';
+      case 'refunded': return '#78909C';
       default: return '#999';
     }
   };
 
-  const getStatusBgColor = (status: Order['status']) => {
+  const getStatusBgColor = (status: string) => {
     switch (status) {
       case 'pending': return '#FFF3E0';
       case 'confirmed': return '#E3F2FD';
+      case 'processing': return '#F3E5F5';
       case 'shipped': return '#EDE7F6';
       case 'delivered': return '#E8F5E9';
       case 'cancelled': return '#FFEBEE';
+      case 'refunded': return '#ECEFF1';
       default: return '#F5F5F5';
     }
   };
 
-  const filteredOrders = selectedFilter === 'all' 
-    ? orders 
-    : orders.filter(o => o.status === selectedFilter);
+  const filteredOrders =
+    selectedFilter === 'all' ? orders : orders.filter(o => o.status === selectedFilter);
 
-  // Not a brand - show message
-  if (!isBrand) {
+  const handleCancel = (orderId: number) => {
+    Alert.alert('Cancel Order', 'Are you sure you want to cancel this order?', [
+      { text: 'No' },
+      {
+        text: 'Yes, cancel',
+        style: 'destructive',
+        onPress: async () => {
+          if (!accessToken) return;
+          try {
+            await cancelOrder(accessToken, orderId);
+            fetchOrders();
+          } catch (err: any) {
+            Alert.alert('Error', err.message || 'Failed to cancel order');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleStatusUpdate = (orderId: number, newStatus: string) => {
+    if (!accessToken) return;
+    Alert.alert('Update Status', `Mark this order as "${newStatus}"?`, [
+      { text: 'No' },
+      {
+        text: 'Yes',
+        onPress: async () => {
+          try {
+            await updateOrderStatus(accessToken, orderId, newStatus);
+            fetchOrders();
+          } catch (err: any) {
+            Alert.alert('Error', err.message || 'Failed to update status');
+          }
+        },
+      },
+    ]);
+  };
+
+  const getNextStatus = (current: string): string | null => {
+    const flow: Record<string, string> = {
+      pending: 'confirmed',
+      confirmed: 'processing',
+      processing: 'shipped',
+      shipped: 'delivered',
+    };
+    return flow[current] || null;
+  };
+
+  const renderOrder = ({ item }: { item: Order }) => {
+    const itemSummary = item.items.map(i => `${i.product_name} ×${i.quantity}`).join(', ');
+    const nextStatus = isBrand ? getNextStatus(item.status) : null;
+    const canCancel = !isBrand && ['pending', 'confirmed'].includes(item.status);
+
+    return (
+      <TouchableOpacity
+        style={styles.orderCard}
+        onPress={() => router.push(`/orderDetail?id=${item.id}`)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.orderHeader}>
+          <ThemedText style={styles.orderNumber}>Order #{item.id}</ThemedText>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusBgColor(item.status) }]}>
+            <ThemedText style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+              {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+            </ThemedText>
+          </View>
+        </View>
+
+        <View style={styles.orderInfo}>
+          {isBrand && (
+            <View style={styles.orderRow}>
+              <Ionicons name="person-outline" size={16} color="#666" />
+              <ThemedText style={styles.orderRowText}>{item.username}</ThemedText>
+            </View>
+          )}
+          <View style={styles.orderRow}>
+            <Ionicons name="cube-outline" size={16} color="#666" />
+            <ThemedText style={styles.orderRowText} numberOfLines={2}>{itemSummary}</ThemedText>
+          </View>
+          <View style={styles.orderRow}>
+            <Ionicons name="calendar-outline" size={16} color="#666" />
+            <ThemedText style={styles.orderRowText}>
+              {new Date(item.created_at).toLocaleDateString()}
+            </ThemedText>
+          </View>
+        </View>
+
+        <View style={styles.orderFooter}>
+          <ThemedText style={styles.orderTotal}>${Number(item.total_amount).toFixed(2)}</ThemedText>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {canCancel && (
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => handleCancel(item.id)}
+              >
+                <ThemedText style={styles.cancelBtnText}>Cancel</ThemedText>
+              </TouchableOpacity>
+            )}
+            {nextStatus && (
+              <TouchableOpacity
+                style={styles.nextStatusBtn}
+                onPress={() => handleStatusUpdate(item.id, nextStatus)}
+              >
+                <ThemedText style={styles.nextStatusBtnText}>
+                  Mark {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1)}
+                </ThemedText>
+              </TouchableOpacity>
+            )}
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // --- Not signed in ---
+  if (!accessToken) {
     return (
       <ThemedView style={styles.container}>
         <View style={styles.emptyContainer}>
-          <Ionicons name="storefront-outline" size={64} color="#CCC" />
-          <ThemedText style={styles.emptyTitle}>Brand Only</ThemedText>
-          <ThemedText style={styles.emptyMessage}>This section is only available for brand accounts</ThemedText>
+          <Ionicons name="log-in-outline" size={64} color="#CCC" />
+          <ThemedText style={styles.emptyTitle}>Sign in</ThemedText>
+          <ThemedText style={styles.emptyMessage}>Sign in to view your orders</ThemedText>
         </View>
       </ThemedView>
     );
@@ -83,8 +204,10 @@ export default function OrdersScreen() {
     <ThemedView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <ThemedText style={styles.headerTitle}>Orders</ThemedText>
-        <TouchableOpacity style={styles.refreshButton}>
+        <ThemedText style={styles.headerTitle}>
+          {isBrand ? 'Customer Orders' : 'My Orders'}
+        </ThemedText>
+        <TouchableOpacity style={styles.refreshButton} onPress={fetchOrders}>
           <Ionicons name="refresh" size={22} color="#000" />
         </TouchableOpacity>
       </View>
@@ -141,14 +264,16 @@ export default function OrdersScreen() {
             <TouchableOpacity
               style={[
                 styles.filterButton,
-                selectedFilter === item.key && styles.filterButtonActive
+                selectedFilter === item.key && styles.filterButtonActive,
               ]}
               onPress={() => setSelectedFilter(item.key)}
             >
-              <ThemedText style={[
-                styles.filterText,
-                selectedFilter === item.key && styles.filterTextActive
-              ]}>
+              <ThemedText
+                style={[
+                  styles.filterText,
+                  selectedFilter === item.key && styles.filterTextActive,
+                ]}
+              >
                 {item.label}
               </ThemedText>
             </TouchableOpacity>
@@ -158,55 +283,24 @@ export default function OrdersScreen() {
 
       {/* Orders List */}
       {isLoading ? (
-        <ActivityIndicator size="large" color="#000" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={ShopFlareColors.primary} style={{ marginTop: 40 }} />
       ) : filteredOrders.length === 0 ? (
         <View style={styles.emptyOrders}>
           <Ionicons name="receipt-outline" size={64} color="#CCC" />
           <ThemedText style={styles.emptyOrdersText}>No orders yet</ThemedText>
           <ThemedText style={styles.emptyOrdersSubtext}>
-            When customers order your products, they'll appear here
+            {isBrand
+              ? "When customers order your products, they'll appear here"
+              : 'Your placed orders will appear here'}
           </ThemedText>
         </View>
       ) : (
         <FlatList
           data={filteredOrders}
-          keyExtractor={(item) => item.id}
+          keyExtractor={item => String(item.id)}
           contentContainerStyle={styles.orderList}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.orderCard}>
-              <View style={styles.orderHeader}>
-                <ThemedText style={styles.orderNumber}>#{item.orderNumber}</ThemedText>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusBgColor(item.status) }]}>
-                  <ThemedText style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                  </ThemedText>
-                </View>
-              </View>
-              
-              <View style={styles.orderInfo}>
-                <View style={styles.orderRow}>
-                  <Ionicons name="person-outline" size={16} color="#666" />
-                  <ThemedText style={styles.orderRowText}>{item.customerName}</ThemedText>
-                </View>
-                <View style={styles.orderRow}>
-                  <Ionicons name="cube-outline" size={16} color="#666" />
-                  <ThemedText style={styles.orderRowText}>
-                    {item.productName} x{item.quantity}
-                  </ThemedText>
-                </View>
-                <View style={styles.orderRow}>
-                  <Ionicons name="calendar-outline" size={16} color="#666" />
-                  <ThemedText style={styles.orderRowText}>{item.date}</ThemedText>
-                </View>
-              </View>
-              
-              <View style={styles.orderFooter}>
-                <ThemedText style={styles.orderTotal}>${item.total.toFixed(2)}</ThemedText>
-                <Ionicons name="chevron-forward" size={20} color="#999" />
-              </View>
-            </TouchableOpacity>
-          )}
+          renderItem={renderOrder}
         />
       )}
     </ThemedView>
@@ -395,5 +489,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
+  },
+  cancelBtn: {
+    borderWidth: 1,
+    borderColor: '#EF5350',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  cancelBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#EF5350',
+  },
+  nextStatusBtn: {
+    backgroundColor: ShopFlareColors.primary,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  nextStatusBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFF',
   },
 });

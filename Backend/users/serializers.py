@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address
+from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address, Order, OrderItem
 
 User = get_user_model()
 
@@ -285,3 +285,68 @@ class ChangePasswordSerializer(serializers.Serializer):
         if attrs['new_password'] != attrs['new_password2']:
             raise serializers.ValidationError({"new_password": "Password fields didn't match."})
         return attrs
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    """Serializer for individual order line items"""
+
+    class Meta:
+        model = OrderItem
+        fields = [
+            'id', 'product', 'product_name', 'product_price',
+            'quantity', 'selected_size', 'selected_color', 'line_total',
+        ]
+        read_only_fields = ['id', 'line_total']
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    """Serializer for orders (read)"""
+    items = OrderItemSerializer(many=True, read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+
+    class Meta:
+        model = Order
+        fields = [
+            'id', 'username', 'status', 'payment_method', 'payment_status',
+            'shipping_full_name', 'shipping_phone',
+            'shipping_address_line1', 'shipping_address_line2',
+            'shipping_city', 'shipping_state', 'shipping_postal_code', 'shipping_country',
+            'subtotal', 'shipping_cost', 'total_amount',
+            'notes', 'items', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'username', 'subtotal', 'total_amount', 'created_at', 'updated_at']
+
+
+class CheckoutSerializer(serializers.Serializer):
+    """Serializer for placing an order (checkout)"""
+    address_id = serializers.IntegerField(required=False, help_text='ID of an existing saved address')
+    # Or inline address fields
+    shipping_full_name = serializers.CharField(max_length=100, required=False)
+    shipping_phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    shipping_address_line1 = serializers.CharField(max_length=255, required=False)
+    shipping_address_line2 = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    shipping_city = serializers.CharField(max_length=100, required=False)
+    shipping_state = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    shipping_postal_code = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    shipping_country = serializers.CharField(max_length=100, required=False)
+
+    payment_method = serializers.ChoiceField(choices=['cod', 'card', 'wallet'], default='cod')
+    notes = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        # Must supply either address_id or full address fields
+        if not attrs.get('address_id'):
+            required = ['shipping_full_name', 'shipping_address_line1', 'shipping_city', 'shipping_country']
+            missing = [f for f in required if not attrs.get(f)]
+            if missing:
+                raise serializers.ValidationError(
+                    f"Provide address_id or fill: {', '.join(missing)}"
+                )
+        return attrs
+
+
+class OrderStatusUpdateSerializer(serializers.Serializer):
+    """Serializer for brand to update order status"""
+    status = serializers.ChoiceField(
+        choices=['confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded']
+    )

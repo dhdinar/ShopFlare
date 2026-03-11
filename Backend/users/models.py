@@ -203,6 +203,84 @@ class Address(models.Model):
         return f"{self.user.username} - {self.label}: {self.address_line1}, {self.city}"
 
 
+class Order(models.Model):
+    """Order model representing a completed checkout"""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('confirmed', 'Confirmed'),
+        ('processing', 'Processing'),
+        ('shipped', 'Shipped'),
+        ('delivered', 'Delivered'),
+        ('cancelled', 'Cancelled'),
+        ('refunded', 'Refunded'),
+    ]
+
+    PAYMENT_METHOD_CHOICES = [
+        ('cod', 'Cash on Delivery'),
+        ('card', 'Credit/Debit Card'),
+        ('wallet', 'Wallet'),
+    ]
+
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='orders')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='cod')
+    payment_status = models.CharField(max_length=20, default='pending')  # pending / paid / failed
+
+    # Snapshot of shipping address at order time
+    shipping_full_name = models.CharField(max_length=100)
+    shipping_phone = models.CharField(max_length=20, blank=True, null=True)
+    shipping_address_line1 = models.CharField(max_length=255)
+    shipping_address_line2 = models.CharField(max_length=255, blank=True, null=True)
+    shipping_city = models.CharField(max_length=100)
+    shipping_state = models.CharField(max_length=100, blank=True, null=True)
+    shipping_postal_code = models.CharField(max_length=20, blank=True, null=True)
+    shipping_country = models.CharField(max_length=100, default='')
+
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    shipping_cost = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'orders'
+        verbose_name = 'Order'
+        verbose_name_plural = 'Orders'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Order #{self.id} by {self.user.username} - {self.status}"
+
+
+class OrderItem(models.Model):
+    """Individual line items in an order"""
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, related_name='order_items')
+    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, related_name='order_items')
+
+    # Snapshot of product info at order time
+    product_name = models.CharField(max_length=200)
+    product_price = models.DecimalField(max_digits=10, decimal_places=2)  # unit price paid
+    quantity = models.PositiveIntegerField(default=1)
+    selected_size = models.CharField(max_length=20, blank=True, null=True)
+    selected_color = models.CharField(max_length=50, blank=True, null=True)
+    line_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    class Meta:
+        db_table = 'order_items'
+        verbose_name = 'Order Item'
+        verbose_name_plural = 'Order Items'
+
+    def __str__(self):
+        return f"Order #{self.order.id} - {self.product_name} x{self.quantity}"
+
+    def save(self, *args, **kwargs):
+        self.line_total = self.product_price * self.quantity
+        super().save(*args, **kwargs)
+
+
 class Review(models.Model):
     """Review model for users to rate and review products"""
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='reviews')

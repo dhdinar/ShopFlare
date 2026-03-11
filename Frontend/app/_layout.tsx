@@ -39,6 +39,8 @@ function RootLayoutNav() {
               <Stack.Screen name="fashion/checkout" />
               <Stack.Screen name="editProfile" />
               <Stack.Screen name="addresses" />
+              <Stack.Screen name="checkout" />
+              <Stack.Screen name="orderDetail" />
               <Stack.Screen name="myReviews" />
               <Stack.Screen name="settings" />
               <Stack.Screen name="helpSupport" />

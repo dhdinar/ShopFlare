@@ -1,0 +1,332 @@
+import { StyleSheet, View, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState, useEffect } from 'react';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { Ionicons } from '@expo/vector-icons';
+import { ShopFlareColors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
+import { getOrder, cancelOrder, Order } from '@/services/orderService';
+
+export default function OrderDetailScreen() {
+  const { id } = useLocalSearchParams();
+  const router = useRouter();
+  const { accessToken, user } = useAuth();
+
+  const [order, setOrder] = useState<Order | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const isBrand = user?.user_type === 'brand';
+
+  useEffect(() => {
+    loadOrder();
+  }, []);
+
+  const loadOrder = async () => {
+    if (!accessToken || !id) return;
+    setIsLoading(true);
+    try {
+      const data = await getOrder(accessToken, Number(id));
+      setOrder(data);
+    } catch (err) {
+      console.error('Failed to load order:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (!accessToken || !order) return;
+    Alert.alert('Cancel Order', 'Are you sure you want to cancel this order?', [
+      { text: 'No' },
+      {
+        text: 'Yes, cancel',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const updated = await cancelOrder(accessToken, order.id);
+            setOrder(updated);
+          } catch (err: any) {
+            Alert.alert('Error', err.message || 'Failed to cancel');
+          }
+        },
+      },
+    ]);
+  };
+
+  const getStatusColor = (status: string) => {
+    const map: Record<string, string> = {
+      pending: '#FFA726', confirmed: '#42A5F5', processing: '#AB47BC',
+      shipped: '#7E57C2', delivered: '#66BB6A', cancelled: '#EF5350', refunded: '#78909C',
+    };
+    return map[status] || '#999';
+  };
+
+  const getStatusBgColor = (status: string) => {
+    const map: Record<string, string> = {
+      pending: '#FFF3E0', confirmed: '#E3F2FD', processing: '#F3E5F5',
+      shipped: '#EDE7F6', delivered: '#E8F5E9', cancelled: '#FFEBEE', refunded: '#ECEFF1',
+    };
+    return map[status] || '#F5F5F5';
+  };
+
+  const STATUS_STEPS = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
+
+  if (isLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <ThemedText style={styles.headerTitle}>Order Details</ThemedText>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={ShopFlareColors.primary} />
+        </View>
+      </ThemedView>
+    );
+  }
+
+  if (!order) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <ThemedText style={styles.headerTitle}>Order Details</ThemedText>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.centered}>
+          <Ionicons name="alert-circle-outline" size={48} color="#CCC" />
+          <ThemedText style={{ color: '#999', marginTop: 12 }}>Order not found</ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
+
+  const canCancel = !isBrand && ['pending', 'confirmed'].includes(order.status);
+  const stepIndex = STATUS_STEPS.indexOf(order.status);
+  const isCancelled = order.status === 'cancelled' || order.status === 'refunded';
+
+  return (
+    <ThemedView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#FFF" />
+        </TouchableOpacity>
+        <ThemedText style={styles.headerTitle}>Order #{order.id}</ThemedText>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Status Banner */}
+        <View style={[styles.statusBanner, { backgroundColor: getStatusBgColor(order.status) }]}>
+          <Ionicons
+            name={
+              order.status === 'delivered'
+                ? 'checkmark-circle'
+                : order.status === 'cancelled'
+                ? 'close-circle'
+                : 'time'
+            }
+            size={28}
+            color={getStatusColor(order.status)}
+          />
+          <View style={{ marginLeft: 12 }}>
+            <ThemedText style={[styles.statusTitle, { color: getStatusColor(order.status) }]}>
+              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+            </ThemedText>
+            <ThemedText style={styles.statusDate}>
+              Placed on {new Date(order.created_at).toLocaleDateString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric',
+              })}
+            </ThemedText>
+          </View>
+        </View>
+
+        {/* Progress Tracker */}
+        {!isCancelled && (
+          <View style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Order Progress</ThemedText>
+            <View style={styles.progressRow}>
+              {STATUS_STEPS.map((step, idx) => {
+                const active = idx <= stepIndex;
+                return (
+                  <View key={step} style={styles.progressStep}>
+                    <View style={[styles.progressDot, active && styles.progressDotActive]} />
+                    {idx < STATUS_STEPS.length - 1 && (
+                      <View style={[styles.progressLine, active && styles.progressLineActive]} />
+                    )}
+                    <ThemedText style={[styles.progressLabel, active && styles.progressLabelActive]}>
+                      {step.charAt(0).toUpperCase() + step.slice(1)}
+                    </ThemedText>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* Items */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Items</ThemedText>
+          {order.items.map(item => (
+            <View key={item.id} style={styles.itemCard}>
+              <View style={{ flex: 1 }}>
+                <ThemedText style={styles.itemName}>{item.product_name}</ThemedText>
+                <ThemedText style={styles.itemMeta}>
+                  {[item.selected_size, item.selected_color].filter(Boolean).join(' / ') || ''}
+                </ThemedText>
+                <ThemedText style={styles.itemQty}>Qty: {item.quantity}</ThemedText>
+              </View>
+              <ThemedText style={styles.itemPrice}>
+                ${Number(item.line_total).toFixed(2)}
+              </ThemedText>
+            </View>
+          ))}
+        </View>
+
+        {/* Payment */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Payment Summary</ThemedText>
+          <View style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <ThemedText style={styles.infoLabel}>Payment Method</ThemedText>
+              <ThemedText style={styles.infoValue}>
+                {order.payment_method === 'cod' ? 'Cash on Delivery' : order.payment_method === 'card' ? 'Card' : 'Wallet'}
+              </ThemedText>
+            </View>
+            <View style={styles.infoRow}>
+              <ThemedText style={styles.infoLabel}>Subtotal</ThemedText>
+              <ThemedText style={styles.infoValue}>${Number(order.subtotal).toFixed(2)}</ThemedText>
+            </View>
+            <View style={styles.infoRow}>
+              <ThemedText style={styles.infoLabel}>Shipping</ThemedText>
+              <ThemedText style={[styles.infoValue, Number(order.shipping_cost) === 0 && { color: '#66BB6A' }]}>
+                {Number(order.shipping_cost) === 0 ? 'FREE' : `$${Number(order.shipping_cost).toFixed(2)}`}
+              </ThemedText>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.infoRow}>
+              <ThemedText style={styles.totalLabel}>Total</ThemedText>
+              <ThemedText style={styles.totalValue}>${Number(order.total_amount).toFixed(2)}</ThemedText>
+            </View>
+          </View>
+        </View>
+
+        {/* Shipping Address */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Shipping Address</ThemedText>
+          <View style={styles.infoCard}>
+            <ThemedText style={styles.addrName}>{order.shipping_full_name}</ThemedText>
+            <ThemedText style={styles.addrLine}>{order.shipping_address_line1}</ThemedText>
+            {order.shipping_address_line2 ? (
+              <ThemedText style={styles.addrLine}>{order.shipping_address_line2}</ThemedText>
+            ) : null}
+            <ThemedText style={styles.addrLine}>
+              {order.shipping_city}
+              {order.shipping_state ? `, ${order.shipping_state}` : ''}{' '}
+              {order.shipping_postal_code || ''}
+            </ThemedText>
+            <ThemedText style={styles.addrLine}>{order.shipping_country}</ThemedText>
+            {order.shipping_phone ? (
+              <ThemedText style={styles.addrPhone}>{order.shipping_phone}</ThemedText>
+            ) : null}
+          </View>
+        </View>
+
+        {/* Notes */}
+        {order.notes ? (
+          <View style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Notes</ThemedText>
+            <View style={styles.infoCard}>
+              <ThemedText style={{ color: '#555', lineHeight: 20 }}>{order.notes}</ThemedText>
+            </View>
+          </View>
+        ) : null}
+
+        {/* Cancel Button */}
+        {canCancel && (
+          <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+            <Ionicons name="close-circle-outline" size={20} color="#EF5350" />
+            <ThemedText style={styles.cancelButtonText}>Cancel Order</ThemedText>
+          </TouchableOpacity>
+        )}
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </ThemedView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingTop: 60, paddingHorizontal: 20, paddingBottom: 18,
+    backgroundColor: ShopFlareColors.primary,
+  },
+  backButton: { width: 40, height: 40, justifyContent: 'center' },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFF' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  content: { flex: 1, padding: 16 },
+
+  statusBanner: {
+    flexDirection: 'row', alignItems: 'center', borderRadius: 14,
+    padding: 16, marginBottom: 20,
+  },
+  statusTitle: { fontSize: 18, fontWeight: '700' },
+  statusDate: { fontSize: 13, color: '#666', marginTop: 2 },
+
+  section: { marginBottom: 20 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 10 },
+
+  // Progress
+  progressRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 },
+  progressStep: { alignItems: 'center', flex: 1 },
+  progressDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#DDD' },
+  progressDotActive: { backgroundColor: ShopFlareColors.primary },
+  progressLine: {
+    position: 'absolute', top: 6, left: '55%', right: '-45%', height: 2,
+    backgroundColor: '#DDD', zIndex: -1,
+  },
+  progressLineActive: { backgroundColor: ShopFlareColors.primary },
+  progressLabel: { fontSize: 10, color: '#AAA', marginTop: 6, textAlign: 'center' },
+  progressLabelActive: { color: ShopFlareColors.primary, fontWeight: '600' },
+
+  // Items
+  itemCard: {
+    flexDirection: 'row', backgroundColor: '#FFF', borderRadius: 12,
+    padding: 14, marginBottom: 8, alignItems: 'center',
+  },
+  itemName: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
+  itemMeta: { fontSize: 12, color: '#999', marginTop: 2 },
+  itemQty: { fontSize: 12, color: '#666', marginTop: 4 },
+  itemPrice: { fontSize: 15, fontWeight: '700', color: ShopFlareColors.primary },
+
+  // Info card
+  infoCard: { backgroundColor: '#FFF', borderRadius: 14, padding: 16 },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  infoLabel: { fontSize: 14, color: '#999' },
+  infoValue: { fontSize: 14, fontWeight: '500', color: '#333' },
+  divider: { height: 1, backgroundColor: '#EEE', marginVertical: 10 },
+  totalLabel: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A' },
+  totalValue: { fontSize: 18, fontWeight: 'bold', color: ShopFlareColors.primary },
+
+  // Address
+  addrName: { fontWeight: '700', fontSize: 15, color: '#1A1A1A', marginBottom: 4 },
+  addrLine: { fontSize: 13, color: '#666', lineHeight: 20 },
+  addrPhone: { fontSize: 13, color: '#888', marginTop: 6 },
+
+  // Cancel
+  cancelButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: '#EF5350', borderRadius: 14,
+    paddingVertical: 14, gap: 8, marginTop: 4,
+  },
+  cancelButtonText: { fontSize: 15, fontWeight: '600', color: '#EF5350' },
+});
