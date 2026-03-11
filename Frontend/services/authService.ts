@@ -152,7 +152,7 @@ export const updateProfile = async (
   accessToken: string,
   data: Partial<User>,
 ): Promise<User> => {
-  const response = await fetch(`${API_BASE_URL}/auth/update-profile/`, {
+  const response = await fetch(`${API_BASE_URL}/auth/profile/update/`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -166,8 +166,29 @@ export const updateProfile = async (
     throw new Error(Object.values(error).flat().join(', '));
   }
 
-  const result = await response.json();
-  return result.user;
+  return await response.json();
+};
+
+// Update brand profile
+export const updateBrandProfile = async (
+  accessToken: string,
+  data: Partial<User>,
+): Promise<User> => {
+  const response = await fetch(`${API_BASE_URL}/auth/brand/profile/update/`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(Object.values(error).flat().join(', '));
+  }
+
+  return await response.json();
 };
 
 // Change password
@@ -175,7 +196,7 @@ export const changePassword = async (
   accessToken: string,
   data: ChangePasswordData,
 ): Promise<{ message: string }> => {
-  const response = await fetch(`${API_BASE_URL}/auth/change-password/`, {
+  const response = await fetch(`${API_BASE_URL}/auth/profile/change-password/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Brand, Product, ProductImage, Wishlist, CartItem, Review, Message
+from .models import CustomUser, Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address
 
 
 @admin.register(CustomUser)
@@ -111,3 +111,12 @@ class MessageAdmin(admin.ModelAdmin):
     def short_message(self, obj):
         return obj.message[:50] + '...' if len(obj.message) > 50 else obj.message
     short_message.short_description = 'Message'
+
+
+@admin.register(Address)
+class AddressAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'label', 'full_name', 'city', 'country', 'is_default', 'created_at']
+    list_filter = ['label', 'is_default', 'country', 'created_at']
+    search_fields = ['user__username', 'full_name', 'address_line1', 'city', 'country']
+    readonly_fields = ['created_at', 'updated_at']
+    ordering = ['user', '-is_default', '-created_at']

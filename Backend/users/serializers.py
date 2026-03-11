@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message
+from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address
 
 User = get_user_model()
 
@@ -260,3 +260,28 @@ class MessageSerializer(serializers.ModelSerializer):
             return obj.receiver_user.username
         return None
 
+
+class AddressSerializer(serializers.ModelSerializer):
+    """Serializer for user shipping addresses"""
+
+    class Meta:
+        model = Address
+        fields = [
+            'id', 'label', 'full_name', 'phone',
+            'address_line1', 'address_line2',
+            'city', 'state', 'postal_code', 'country',
+            'is_default', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """Serializer for changing password"""
+    old_password = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(required=True, write_only=True, validators=[validate_password])
+    new_password2 = serializers.CharField(required=True, write_only=True)
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['new_password2']:
+            raise serializers.ValidationError({"new_password": "Password fields didn't match."})
+        return attrs

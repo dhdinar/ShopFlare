@@ -53,6 +53,18 @@ urlpatterns = [
     path('products/<int:product_id>/messages/', views.product_messages_view, name='product_messages'),
     path('messages/send/', views.send_message_view, name='send_message'),
 
+    # Address endpoints
+    path('addresses/', views.address_list_view, name='address_list'),
+    path('addresses/create/', views.address_create_view, name='address_create'),
+    path('addresses/<int:address_id>/', views.address_detail_view, name='address_detail'),
+
+    # Change password
+    path('profile/change-password/', views.change_password_view, name='change_password'),
+    path('brand/change-password/', views.change_brand_password_view, name='change_brand_password'),
+
+    # Brand analytics
+    path('brand/analytics/', views.brand_analytics_view, name='brand_analytics'),
+
     # Health check
     path('health/', views.health, name='health'),
 ]

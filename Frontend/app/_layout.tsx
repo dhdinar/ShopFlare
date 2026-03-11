@@ -37,6 +37,12 @@ function RootLayoutNav() {
               <Stack.Screen name="fashion/productDetails" />
               <Stack.Screen name="fashion/chat" />
               <Stack.Screen name="fashion/checkout" />
+              <Stack.Screen name="editProfile" />
+              <Stack.Screen name="addresses" />
+              <Stack.Screen name="myReviews" />
+              <Stack.Screen name="settings" />
+              <Stack.Screen name="helpSupport" />
+              <Stack.Screen name="brandAnalytics" />
             </>
           )}
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />

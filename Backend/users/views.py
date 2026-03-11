@@ -15,8 +15,8 @@ from .serializers import (UserSerializer, BrandSerializer, RegisterSerializer,
                           ProductSerializer, ProductCreateUpdateSerializer,
                           ProductImageSerializer, WishlistSerializer, CartItemSerializer,
                           ReviewSerializer, ReviewCreateSerializer,
-                          MessageSerializer)
-from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message
+                          MessageSerializer, AddressSerializer, ChangePasswordSerializer)
+from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address
 from .authentication import BrandUser
 
 User = get_user_model()
@@ -752,6 +752,147 @@ def send_message_view(request):
 
 
 from django.http import HttpResponse
+
+# ==================== Address Views ====================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def address_list_view(request):
+    """List all addresses of current user"""
+    addresses = Address.objects.filter(user=request.user)
+    serializer = AddressSerializer(addresses, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def address_create_view(request):
+    """Create a new address for current user"""
+    serializer = AddressSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    serializer.save(user=request.user)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def address_detail_view(request, address_id):
+    """Retrieve, update or delete a specific address"""
+    try:
+        address = Address.objects.get(id=address_id, user=request.user)
+    except Address.DoesNotExist:
+        return Response({'detail': 'Address not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        return Response(AddressSerializer(address).data)
+
+    if request.method in ('PUT', 'PATCH'):
+        partial = request.method == 'PATCH'
+        serializer = AddressSerializer(address, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    if request.method == 'DELETE':
+        address.delete()
+        return Response({'message': 'Address deleted'}, status=status.HTTP_200_OK)
+
+
+# ==================== Change Password Views ====================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password_view(request):
+    """Change password for authenticated customer"""
+    serializer = ChangePasswordSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    user = request.user
+    if not user.check_password(serializer.validated_data['old_password']):
+        return Response({'detail': 'Old password is incorrect'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(serializer.validated_data['new_password'])
+    user.save()
+    return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def change_brand_password_view(request):
+    """Change password for authenticated brand"""
+    brand = get_brand_from_token(request)
+    if not brand:
+        return Response({'detail': 'Brand authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    old_password = request.data.get('old_password')
+    new_password = request.data.get('new_password')
+    new_password2 = request.data.get('new_password2')
+
+    if not old_password or not new_password or not new_password2:
+        return Response({'detail': 'old_password, new_password and new_password2 are required'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    if not brand.check_password(old_password):
+        return Response({'detail': 'Old password is incorrect'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if new_password != new_password2:
+        return Response({'detail': "Passwords didn't match"}, status=status.HTTP_400_BAD_REQUEST)
+
+    brand.set_password(new_password)
+    brand.save()
+    return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
+
+
+# ==================== Brand Analytics View ====================
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def brand_analytics_view(request):
+    """Get analytics data for a brand"""
+    brand = get_brand_from_token(request)
+    if not brand:
+        return Response({'detail': 'Brand authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    from django.db.models import Sum, Avg, Count
+
+    products = Product.objects.filter(brand=brand)
+    total_products = products.count()
+    active_products = products.filter(is_active=True).count()
+
+    # Wishlist count (products from this brand saved by users)
+    wishlist_count = Wishlist.objects.filter(product__brand=brand).count()
+
+    # Cart count (products from this brand in user carts)
+    cart_count = CartItem.objects.filter(product__brand=brand).aggregate(
+        total=Sum('quantity'))['total'] or 0
+
+    # Reviews
+    review_stats = Review.objects.filter(product__brand=brand).aggregate(
+        total=Count('id'), avg_rating=Avg('rating'))
+    total_reviews = review_stats['total'] or 0
+    avg_rating = round(review_stats['avg_rating'] or 0, 1)
+
+    # Top 5 products by wishlist saves
+    top_products = (
+        products.filter(is_active=True)
+        .annotate(saves=Count('wishlisted_by'))
+        .order_by('-saves')[:5]
+    )
+    top_products_data = [
+        {'id': p.id, 'name': p.name, 'price': str(p.price), 'saves': p.saves}
+        for p in top_products
+    ]
+
+    return Response({
+        'total_products': total_products,
+        'active_products': active_products,
+        'wishlist_saves': wishlist_count,
+        'cart_adds': int(cart_count),
+        'total_reviews': total_reviews,
+        'average_rating': avg_rating,
+        'top_products': top_products_data,
+    })
+
 
 def health(request):
     return HttpResponse("OK")

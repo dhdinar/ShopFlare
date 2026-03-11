@@ -24,10 +24,6 @@
       "package": "com.dinar.shopflare",
       "versionCode": 1
     },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
-    },
     "plugins": [
       "expo-router",
       [

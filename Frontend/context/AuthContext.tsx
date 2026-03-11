@@ -36,6 +36,8 @@ interface AuthContextType {
   register: (data: authService.RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
+  updateBrandProfile: (data: Partial<User>) => Promise<void>;
+  setUserData: (data: Partial<User>) => Promise<void>;
   changePassword: (oldPassword: string, newPassword: string, newPassword2: string) => Promise<void>;
   checkAuthStatus: () => Promise<void>;
 }
@@ -150,6 +152,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const updateBrandProfile = async (data: Partial<User>) => {
+    if (!accessToken) throw new Error('Not authenticated');
+
+    setIsLoading(true);
+    try {
+      const updatedUser = await authService.updateBrandProfile(accessToken, data);
+      const merged = { ...user, ...updatedUser } as User;
+      setUser(merged);
+      await tokenStorage.saveUser(merged);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const setUserData = async (data: Partial<User>) => {
+    const merged = { ...user, ...data } as User;
+    setUser(merged);
+    await tokenStorage.saveUser(merged);
+  };
+
   const changePassword = async (oldPassword: string, newPassword: string, newPassword2: string) => {
     if (!accessToken) throw new Error('Not authenticated');
 
@@ -176,6 +198,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     register,
     logout,
     updateProfile,
+    updateBrandProfile,
+    setUserData,
     changePassword,
     checkAuthStatus,
   };

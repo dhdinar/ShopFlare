@@ -166,6 +166,43 @@ class CartItem(models.Model):
         return f"{self.user.username} - {self.product.name} x{self.quantity}"
 
 
+class Address(models.Model):
+    """Shipping address model for users"""
+    LABEL_CHOICES = [
+        ('home', 'Home'),
+        ('work', 'Work'),
+        ('other', 'Other'),
+    ]
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='addresses')
+    label = models.CharField(max_length=20, choices=LABEL_CHOICES, default='home')
+    full_name = models.CharField(max_length=100)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    address_line1 = models.CharField(max_length=255)
+    address_line2 = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100, blank=True, null=True)
+    postal_code = models.CharField(max_length=20, blank=True, null=True)
+    country = models.CharField(max_length=100, default='')
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'addresses'
+        verbose_name = 'Address'
+        verbose_name_plural = 'Addresses'
+        ordering = ['-is_default', '-created_at']
+
+    def save(self, *args, **kwargs):
+        # If this address is set as default, unset all others for this user
+        if self.is_default:
+            Address.objects.filter(user=self.user, is_default=True).exclude(pk=self.pk).update(is_default=False)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.label}: {self.address_line1}, {self.city}"
+
+
 class Review(models.Model):
     """Review model for users to rate and review products"""
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='reviews')
