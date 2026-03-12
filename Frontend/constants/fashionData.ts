@@ -21,7 +21,7 @@ export const FASHION_SUBCATEGORIES: Record<string, string[]> = {
     'Shirts',
     'Jeans',
     'Trousers',
-    'Kurta',
+    'Panjabi',
     'Jackets',
     'Suits',
     'Shorts',

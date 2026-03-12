@@ -6,13 +6,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { getConversations, getProductMessages, sendMessage, Conversation, Message } from '@/services/messageService';
+import { getConversations, getProductMessages, getProductMessagesWithUser, sendMessage, sendMessageToUser, Conversation, Message } from '@/services/messageService';
 import { Image } from 'expo-image';
 
 export default function ChatScreen() {
   const { accessToken, isSignedIn, user } = useAuth();
   const router = useRouter();
-  const params = useLocalSearchParams<{ productId?: string; brandName?: string; productName?: string }>();
+  const params = useLocalSearchParams<{ productId?: string; brandName?: string; productName?: string; reviewerUsername?: string }>();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -46,11 +46,19 @@ export default function ChatScreen() {
 
   // Handle deep link: open chat for a specific product (only once per productId)
   useEffect(() => {
-    if (params.productId && accessToken && !loading && deepLinkHandled.current !== params.productId) {
-      deepLinkHandled.current = params.productId;
+    const deepLinkKey = params.reviewerUsername
+      ? `${params.productId}_user_${params.reviewerUsername}`
+      : params.productId || '';
+    if (params.productId && accessToken && !loading && deepLinkHandled.current !== deepLinkKey) {
+      deepLinkHandled.current = deepLinkKey;
       const pid = Number(params.productId);
+      const chatType = params.reviewerUsername ? 'user' : 'brand';
       // Try to find existing conversation
-      const existing = conversations.find(c => c.product_id === pid);
+      const existing = conversations.find(c => {
+        if (c.product_id !== pid) return false;
+        if (chatType === 'user') return c.chat_type === 'user' && c.other_party_name === params.reviewerUsername;
+        return c.chat_type !== 'user';
+      });
       if (existing) {
         openChat(existing);
       } else {
@@ -60,15 +68,16 @@ export default function ChatScreen() {
           product_name: params.productName || 'Product',
           product_image: null,
           brand_name: params.brandName || 'Brand',
-          other_party_name: params.brandName || 'Brand',
+          other_party_name: params.reviewerUsername || params.brandName || 'Brand',
           last_message: '',
           last_message_time: new Date().toISOString(),
           is_last_from_brand: false,
           unread_count: 0,
+          chat_type: chatType,
         });
       }
     }
-  }, [params.productId, loading, accessToken]);
+  }, [params.productId, params.reviewerUsername, loading, accessToken]);
 
   const openChat = async (conv: Conversation) => {
     setActiveChat(conv);
@@ -76,7 +85,12 @@ export default function ChatScreen() {
     setLoadingMessages(true);
     try {
       if (accessToken) {
-        const data = await getProductMessages(accessToken, conv.product_id);
+        let data: Message[];
+        if (conv.chat_type === 'user') {
+          data = await getProductMessagesWithUser(accessToken, conv.product_id, conv.other_party_name);
+        } else {
+          data = await getProductMessages(accessToken, conv.product_id);
+        }
         setMessages(data);
       }
     } catch (e) {
@@ -90,10 +104,19 @@ export default function ChatScreen() {
   const handleSendMessage = async () => {
     if (!messageText.trim() || !activeChat || !accessToken) return;
     try {
-      await sendMessage(accessToken, activeChat.product_id, messageText.trim());
+      if (activeChat.chat_type === 'user') {
+        await sendMessageToUser(accessToken, activeChat.product_id, activeChat.other_party_name, messageText.trim());
+      } else {
+        await sendMessage(accessToken, activeChat.product_id, messageText.trim());
+      }
       setMessageText('');
       // Refresh messages
-      const data = await getProductMessages(accessToken, activeChat.product_id);
+      let data: Message[];
+      if (activeChat.chat_type === 'user') {
+        data = await getProductMessagesWithUser(accessToken, activeChat.product_id, activeChat.other_party_name);
+      } else {
+        data = await getProductMessages(accessToken, activeChat.product_id);
+      }
       setMessages(data);
       // Refresh conversations list
       fetchConversations();
@@ -152,7 +175,9 @@ export default function ChatScreen() {
           </TouchableOpacity>
           <View style={styles.chatHeaderInfo}>
             <ThemedText style={styles.chatHeaderName} numberOfLines={1}>
-              {user?.user_type === 'brand' ? activeChat.other_party_name : activeChat.brand_name}
+              {activeChat.chat_type === 'user'
+                ? activeChat.other_party_name
+                : user?.user_type === 'brand' ? activeChat.other_party_name : activeChat.brand_name}
             </ThemedText>
             <ThemedText style={styles.chatHeaderProduct} numberOfLines={1}>
               {activeChat.product_name}
@@ -266,7 +291,7 @@ export default function ChatScreen() {
       ) : (
         <ScrollView showsVerticalScrollIndicator={false}>
           {filteredConversations.map((conv) => (
-            <TouchableOpacity key={conv.product_id} style={styles.conversationCard} onPress={() => openChat(conv)}>
+            <TouchableOpacity key={`${conv.product_id}_${conv.chat_type || 'brand'}_${conv.other_party_name}`} style={styles.conversationCard} onPress={() => openChat(conv)}>
               <View style={styles.avatarContainer}>
                 {conv.product_image ? (
                   <Image source={{ uri: conv.product_image }} style={styles.avatar} />
@@ -279,7 +304,9 @@ export default function ChatScreen() {
               <View style={styles.conversationInfo}>
                 <View style={styles.conversationHeader}>
                   <ThemedText style={styles.conversationName} numberOfLines={1}>
-                    {user?.user_type === 'brand' ? conv.other_party_name : conv.brand_name}
+                    {conv.chat_type === 'user'
+                      ? conv.other_party_name
+                      : user?.user_type === 'brand' ? conv.other_party_name : conv.brand_name}
                   </ThemedText>
                   <ThemedText style={styles.conversationTime}>{formatTime(conv.last_message_time)}</ThemedText>
                 </View>

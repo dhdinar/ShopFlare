@@ -511,6 +511,7 @@ export default function ProductDetailScreen() {
                                     productId: product.id,
                                     brandName: product.brand_name || 'Brand',
                                     productName: product.name,
+                                    reviewerUsername: review.username,
                                   },
                                 });
                               }}

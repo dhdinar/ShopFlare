@@ -713,22 +713,34 @@ def product_messages_view(request, product_id):
     if not product:
         return Response({'detail': 'Product not found'}, status=404)
 
-    # Determine user type
     user = request.user
     is_brand = isinstance(user, BrandUser)
     brand = user.brand if is_brand else None
+
+    # Optional: filter by chat partner for user-to-user chats
+    chat_with = request.query_params.get('chat_with')  # username of the other party
     
     if is_brand:
-        # Brand sees all messages for this product involving their brand
         messages = Message.objects.filter(
             Q(product=product) & (Q(sender_brand=brand) | Q(receiver_brand=brand))
         ).order_by('timestamp')
+    elif chat_with:
+        # User-to-user chat: show messages between current user and the specified user on this product
+        from .models import CustomUser
+        other_user = CustomUser.objects.filter(username=chat_with).first()
+        if not other_user:
+            return Response({'detail': 'User not found'}, status=404)
+        messages = Message.objects.filter(
+            Q(product=product) & (
+                (Q(sender_user=user) & Q(receiver_user=other_user)) |
+                (Q(sender_user=other_user) & Q(receiver_user=user))
+            )
+        ).order_by('timestamp')
     else:
-        # Customer sees messages they sent + any brand replies on this product for them
+        # Customer sees messages they sent/received on this product
         messages = Message.objects.filter(
             Q(product=product) & (
                 Q(sender_user=user) | Q(receiver_user=user) |
-                # Also include brand messages on this product if user has sent a message
                 (Q(is_from_brand=True) & Q(product__messages__sender_user=user))
             )
         ).distinct().order_by('timestamp')
@@ -739,10 +751,11 @@ def product_messages_view(request, product_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def send_message_view(request):
-    """Send a message for a product chat (customer or brand)"""
+    """Send a message for a product chat (customer-to-brand or user-to-user)"""
     data = request.data
     product_id = data.get('product') or data.get('product_id')
     message_text = data.get('message')
+    receiver_username = data.get('receiver_username')  # For user-to-user chat
     if not product_id or not message_text:
         return Response({'detail': 'product and message are required'}, status=400)
     try:
@@ -755,7 +768,17 @@ def send_message_view(request):
     user = request.user
     is_brand = isinstance(user, BrandUser)
     msg = Message(product=product, message=message_text)
-    if is_brand:
+
+    if receiver_username and not is_brand:
+        # User-to-user message
+        from .models import CustomUser
+        receiver = CustomUser.objects.filter(username=receiver_username).first()
+        if not receiver:
+            return Response({'detail': 'Receiver not found'}, status=404)
+        msg.sender_user = user
+        msg.receiver_user = receiver
+        msg.is_from_brand = False
+    elif is_brand:
         msg.sender_brand = user.brand
         # Find the user who started this conversation
         first_msg = Message.objects.filter(
@@ -763,10 +786,11 @@ def send_message_view(request):
         ).order_by('timestamp').first()
         if first_msg and first_msg.sender_user:
             msg.receiver_user = first_msg.sender_user
+        msg.is_from_brand = True
     else:
         msg.sender_user = user
         msg.receiver_brand = product.brand
-    msg.is_from_brand = is_brand
+        msg.is_from_brand = False
     msg.save()
     return Response(MessageSerializer(msg).data, status=201)
 
@@ -774,7 +798,7 @@ def send_message_view(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def conversations_list_view(request):
-    """Get all conversations for the current user/brand, grouped by product."""
+    """Get all conversations for the current user/brand, grouped by product + chat partner."""
     from django.db.models import Q
     from collections import OrderedDict
 
@@ -800,41 +824,58 @@ def conversations_list_view(request):
         ).select_related('product', 'product__brand', 'sender_user', 'sender_brand', 'receiver_user', 'receiver_brand'
         ).order_by('-timestamp')
 
-        # Merge: use a dict to avoid duplicates
         msgs_list = list(msgs) + [m for m in brand_replies if m.id not in {x.id for x in msgs}]
         msgs_list.sort(key=lambda m: m.timestamp, reverse=True)
         msgs = msgs_list
 
-    # Group by product
-    seen_products = OrderedDict()
+    # Group by product + chat partner (to separate brand chats from user-to-user chats)
+    seen_convos = OrderedDict()
     for msg in msgs:
         pid = msg.product_id
-        if pid not in seen_products:
-            product = msg.product
-            # Determine the other party name
-            if is_brand:
-                # Find the customer name from any message in this conversation
-                other_name = None
-                if msg.sender_user:
-                    other_name = msg.sender_user.username
-                elif msg.receiver_user:
-                    other_name = msg.receiver_user.username
-                if not other_name:
-                    other_name = 'Customer'
-            else:
-                other_name = product.brand.username if product.brand else 'Brand'
+        product = msg.product
 
+        # Determine chat type and the other party
+        if is_brand:
+            other_name = None
+            if msg.sender_user:
+                other_name = msg.sender_user.username
+            elif msg.receiver_user:
+                other_name = msg.receiver_user.username
+            if not other_name:
+                other_name = 'Customer'
+            chat_type = 'brand'
+            convo_key = f"{pid}_brand_{other_name}"
+        else:
+            # Check if it's a user-to-user message (no brand involved)
+            is_user_to_user = (
+                msg.sender_brand is None and msg.receiver_brand is None and
+                msg.sender_user is not None and msg.receiver_user is not None
+            )
+            if is_user_to_user:
+                # User-to-user chat
+                if msg.sender_user_id == user.id:
+                    other_name = msg.receiver_user.username
+                else:
+                    other_name = msg.sender_user.username
+                chat_type = 'user'
+                convo_key = f"{pid}_user_{other_name}"
+            else:
+                # Brand chat
+                other_name = product.brand.username if product.brand else 'Brand'
+                chat_type = 'brand'
+                convo_key = f"{pid}_brand"
+
+        if convo_key not in seen_convos:
             # Get product image
             product_image = None
             try:
                 first_img = product.images.first()
                 if first_img and first_img.image_data:
-                    # image_data is already base64 encoded string in the TextField
                     product_image = f"data:{first_img.image_type};base64,{first_img.image_data}"
             except Exception:
                 pass
 
-            seen_products[pid] = {
+            seen_convos[convo_key] = {
                 'product_id': pid,
                 'product_name': product.name,
                 'product_image': product_image,
@@ -844,9 +885,10 @@ def conversations_list_view(request):
                 'last_message_time': msg.timestamp.isoformat(),
                 'is_last_from_brand': msg.is_from_brand,
                 'unread_count': 0,
+                'chat_type': chat_type,  # 'brand' or 'user'
             }
 
-    conversations = list(seen_products.values())
+    conversations = list(seen_convos.values())
     return Response(conversations)
 
 
