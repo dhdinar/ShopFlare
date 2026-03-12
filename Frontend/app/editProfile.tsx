@@ -323,7 +323,7 @@ export default function EditProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -339,15 +339,17 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 60 },
   avatarSection: { alignItems: 'center', marginBottom: 28 },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#F0F0F0',
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: ShopFlareColors.accentLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
+    borderWidth: 3,
+    borderColor: ShopFlareColors.accent,
   },
-  avatarText: { fontSize: 32, fontWeight: '700' },
+  avatarText: { fontSize: 32, fontWeight: '700', color: ShopFlareColors.accent },
   username: { fontSize: 18, fontWeight: '700', marginBottom: 2 },
   email: { fontSize: 14, color: '#666' },
   fieldGroup: { marginBottom: 16 },
@@ -367,12 +369,17 @@ const styles = StyleSheet.create({
   passwordInput: { paddingRight: 46 },
   eyeIcon: { position: 'absolute', right: 14, top: 14 },
   saveButton: {
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 8,
     marginBottom: 24,
+    shadowColor: ShopFlareColors.accent,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   saveButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
   passwordToggle: {

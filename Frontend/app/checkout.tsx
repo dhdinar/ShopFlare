@@ -381,12 +381,17 @@ const styles = StyleSheet.create({
   footerTotal: { fontSize: 18, fontWeight: 'bold', color: ShopFlareColors.primary },
   placeOrderButton: {
     flexDirection: 'row',
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    shadowColor: ShopFlareColors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 5,
   },
   placeOrderText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
 });

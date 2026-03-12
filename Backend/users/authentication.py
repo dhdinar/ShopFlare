@@ -15,7 +15,16 @@ class BrandUser:
         self.email = brand.email
         self.is_authenticated = True
         self.is_active = brand.is_active
+        self.is_brand = True
+        self.is_staff = False
+        self.is_superuser = False
         self.user_type = 'brand'
+
+    def has_perm(self, perm, obj=None):
+        return False
+
+    def has_module_perms(self, app_label):
+        return False
 
 
 class CustomJWTAuthentication(JWTAuthentication):
@@ -29,9 +38,7 @@ class CustomJWTAuthentication(JWTAuthentication):
             result = super().authenticate(request)
             if result is not None:
                 return result
-        except AuthenticationFailed:
-            pass
-        except Exception:
+        except (AuthenticationFailed, Exception):
             pass
         
         # If standard auth fails, try brand token authentication

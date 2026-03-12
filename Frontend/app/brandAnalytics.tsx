@@ -179,7 +179,7 @@ export default function BrandAnalyticsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -52,6 +52,8 @@ urlpatterns = [
     # Messaging endpoints
     path('products/<int:product_id>/messages/', views.product_messages_view, name='product_messages'),
     path('messages/send/', views.send_message_view, name='send_message'),
+    path('messages/send-to-brand/', views.send_message_to_brand_view, name='send_message_to_brand'),
+    path('messages/conversations/', views.conversations_list_view, name='conversations_list'),
 
     # Address endpoints
     path('addresses/', views.address_list_view, name='address_list'),

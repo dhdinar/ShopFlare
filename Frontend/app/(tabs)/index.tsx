@@ -1,4 +1,4 @@
-import { StyleSheet, TouchableOpacity, View, ScrollView, TextInput, Dimensions, ActivityIndicator } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, ScrollView, TextInput, Dimensions, ActivityIndicator, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
@@ -7,17 +7,10 @@ import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
 import { useFashion } from '@/context/FashionContext';
+import { FASHION_CATEGORIES, FASHION_SUBCATEGORIES, FILTER_CATEGORIES } from '@/constants/fashionData';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 60;
-
-// Categories data
-const CATEGORIES = [
-  { id: '1', name: 'Clothes', icon: 'shirt-outline' },
-  { id: '2', name: 'Electronics', icon: 'phone-portrait-outline' },
-  { id: '3', name: 'Shoes', icon: 'footsteps-outline' },
-  { id: '4', name: 'Watch', icon: 'watch-outline' },
-];
 
 // Special offers data
 const SPECIAL_OFFERS = [
@@ -39,59 +32,67 @@ const SPECIAL_OFFERS = [
     id: '3',
     discount: '30%',
     title: 'New Arrivals',
-    subtitle: 'Electronics & Gadgets | Free Shipping',
+    subtitle: 'Trending Fashion | Free Shipping',
     image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400',
   },
 ];
 
 // Category emojis for products without images
 const CATEGORY_EMOJIS: Record<string, string> = {
-  'Clothes': '👕',
-  'Electronics': '📱',
-  'Shoes': '👟',
-  'Watch': '⌚',
-  'Accessories': '🎧',
+  'Men': '👔',
+  'Women': '👗',
+  'Children': '🧒',
   'default': '🛍️',
 };
-
-// Filter tabs
-const FILTER_TABS = ['All', 'Newest', 'Popular', 'Clothes'];
 
 export default function HomeScreen() {
   const router = useRouter();
   const { products, isLoadingProducts, toggleWishlist, isInWishlist } = useFashion();
   const [activeOfferIndex, setActiveOfferIndex] = useState(0);
   const [activeFilter, setActiveFilter] = useState('All');
+  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   const [countdown, setCountdown] = useState({ hours: 2, minutes: 12, seconds: 56 });
   const [searchQuery, setSearchQuery] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // Get subcategories for the active main category
+  const currentSubcategories = activeFilter !== 'All' ? FASHION_SUBCATEGORIES[activeFilter] || [] : [];
+
+  // Reset subcategory when main category changes
+  useEffect(() => {
+    setActiveSubcategory(null);
+  }, [activeFilter]);
+
   // Get filtered products
   const getFilteredProducts = () => {
     let filtered = [...products];
-    
+
     // Search filter
     if (searchQuery.trim()) {
-      filtered = filtered.filter(p => 
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.category?.toLowerCase().includes(searchQuery.toLowerCase())
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.category?.toLowerCase().includes(q) ||
+        p.subcategory?.toLowerCase().includes(q) ||
+        p.brand_name?.toLowerCase().includes(q)
       );
     }
-    
-    // Category filter
+
+    // Main category filter
     if (activeFilter !== 'All') {
-      if (activeFilter === 'Newest') {
-        filtered = filtered.slice(0, 8);
-      } else if (activeFilter === 'Popular') {
-        filtered = filtered.sort((a, b) => (b.average_rating || 0) - (a.average_rating || 0)).slice(0, 8);
-      } else {
-        filtered = filtered.filter(p => 
-          p.category?.toLowerCase().includes(activeFilter.toLowerCase())
-        );
-      }
+      filtered = filtered.filter(p =>
+        p.category?.toLowerCase() === activeFilter.toLowerCase()
+      );
     }
-    
-    return filtered.slice(0, 8);
+
+    // Subcategory filter
+    if (activeSubcategory) {
+      filtered = filtered.filter(p =>
+        p.subcategory?.toLowerCase() === activeSubcategory.toLowerCase()
+      );
+    }
+
+    return filtered.slice(0, 12);
   };
 
   const displayProducts = getFilteredProducts();
@@ -139,7 +140,11 @@ export default function HomeScreen() {
   // Auto-scroll carousel
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveOfferIndex(prev => (prev + 1) % SPECIAL_OFFERS.length);
+      setActiveOfferIndex(prev => {
+        const next = (prev + 1) % SPECIAL_OFFERS.length;
+        scrollViewRef.current?.scrollTo({ x: next * CARD_WIDTH, animated: true });
+        return next;
+      });
     }, 4000);
     return () => clearInterval(interval);
   }, []);
@@ -175,17 +180,17 @@ export default function HomeScreen() {
           {/* Search Bar */}
           <View style={styles.searchContainer}>
             <View style={styles.searchBar}>
-              <Ionicons name="search-outline" size={20} color="#999" />
+                <Ionicons name="search-outline" size={20} color="rgba(255,255,255,0.6)" />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search"
-                placeholderTextColor="#999"
+                placeholder="Search products…"
+                placeholderTextColor="rgba(255,255,255,0.5)"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
             </View>
             <TouchableOpacity style={styles.filterButton}>
-              <Ionicons name="options-outline" size={22} color={ShopFlareColors.primary} />
+              <Ionicons name="options-outline" size={20} color="#FFF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -250,18 +255,28 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <ThemedText style={styles.sectionTitle}>Category</ThemedText>
-            <TouchableOpacity>
-              <ThemedText style={styles.seeAll}>See All</ThemedText>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.categoryGrid}>
-            {CATEGORIES.map((category) => (
-              <TouchableOpacity key={category.id} style={styles.categoryItem}>
-                <View style={styles.categoryIcon}>
-                  <Ionicons name={category.icon as any} size={28} color={ShopFlareColors.primary} />
+            {FASHION_CATEGORIES.map((category) => (
+              <TouchableOpacity 
+                key={category.id} 
+                style={[
+                  styles.categoryItem,
+                  activeFilter === category.name && styles.categoryItemActive,
+                ]}
+                onPress={() => setActiveFilter(activeFilter === category.name ? 'All' : category.name)}
+              >
+                <View style={[
+                  styles.categoryIcon,
+                  activeFilter === category.name && styles.categoryIconActive,
+                ]}>
+                  <Ionicons name={category.icon as any} size={28} color={activeFilter === category.name ? '#FFF' : ShopFlareColors.accent} />
                 </View>
-                <ThemedText style={styles.categoryName}>{category.name}</ThemedText>
+                <ThemedText style={[
+                  styles.categoryName,
+                  activeFilter === category.name && styles.categoryNameActive,
+                ]}>{category.name}</ThemedText>
               </TouchableOpacity>
             ))}
           </View>
@@ -289,7 +304,7 @@ export default function HomeScreen() {
 
           {/* Filter Tabs */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterContainer}>
-            {FILTER_TABS.map((tab) => (
+            {FILTER_CATEGORIES.map((tab) => (
               <TouchableOpacity
                 key={tab}
                 style={[styles.filterTab, activeFilter === tab && styles.filterTabActive]}
@@ -301,6 +316,23 @@ export default function HomeScreen() {
               </TouchableOpacity>
             ))}
           </ScrollView>
+
+          {/* Subcategory Chips */}
+          {currentSubcategories.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subcategoryContainer}>
+              {currentSubcategories.map((sub) => (
+                <TouchableOpacity
+                  key={sub}
+                  style={[styles.subcategoryChip, activeSubcategory === sub && styles.subcategoryChipActive]}
+                  onPress={() => setActiveSubcategory(activeSubcategory === sub ? null : sub)}
+                >
+                  <ThemedText style={[styles.subcategoryText, activeSubcategory === sub && styles.subcategoryTextActive]}>
+                    {sub}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
 
           {/* Flash Sale Products */}
           {isLoadingProducts ? (
@@ -330,19 +362,19 @@ export default function HomeScreen() {
                       ) : (
                         <ThemedText style={styles.productEmoji}>{getProductEmoji(product.category)}</ThemedText>
                       )}
-                      <TouchableOpacity 
+                      <Pressable 
                         style={styles.wishlistIcon}
-                        onPress={(e) => {
-                          e.stopPropagation();
+                        onPress={() => {
                           toggleWishlist(product.id);
                         }}
+                        hitSlop={8}
                       >
                         <Ionicons 
                           name={isWishlisted ? "heart" : "heart-outline"} 
                           size={18} 
                           color={ShopFlareColors.primary} 
                         />
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                     <View style={styles.productInfo}>
                       <ThemedText style={styles.productName} numberOfLines={2}>{product.name}</ThemedText>
@@ -418,10 +450,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FFD700',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: ShopFlareColors.accent,
+    borderWidth: 2,
+    borderColor: ShopFlareColors.primary,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -432,21 +466,21 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 6,
-    fontSize: 13,
-    color: '#333',
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#FFF',
   },
   filterButton: {
-    backgroundColor: '#FFF',
-    padding: 6,
-    borderRadius: 8,
+    backgroundColor: ShopFlareColors.accent,
+    padding: 10,
+    borderRadius: 12,
   },
   section: {
     paddingHorizontal: 20,
@@ -465,7 +499,7 @@ const styles = StyleSheet.create({
   },
   seeAll: {
     fontSize: 14,
-    color: ShopFlareColors.primary,
+    color: ShopFlareColors.accent,
     fontWeight: '600',
   },
   carouselContainer: {
@@ -490,7 +524,7 @@ const styles = StyleSheet.create({
   },
   limitedBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
@@ -523,11 +557,16 @@ const styles = StyleSheet.create({
   },
   claimButton: {
     alignSelf: 'flex-start',
-    backgroundColor: ShopFlareColors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
+    backgroundColor: ShopFlareColors.accent,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 24,
     marginTop: 12,
+    shadowColor: ShopFlareColors.accent,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
   },
   claimButtonText: {
     color: '#FFF',
@@ -547,34 +586,42 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   paginationDotActive: {
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     width: 24,
   },
   categoryGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
   },
   categoryItem: {
     alignItems: 'center',
   },
+  categoryItemActive: {},
   categoryIcon: {
     width: 64,
     height: 64,
-    borderRadius: 32,
-    backgroundColor: '#FFF',
+    borderRadius: 20,
+    backgroundColor: ShopFlareColors.accentLight,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowColor: ShopFlareColors.accent,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
     elevation: 3,
+  },
+  categoryIconActive: {
+    backgroundColor: ShopFlareColors.accent,
   },
   categoryName: {
     marginTop: 8,
     fontSize: 12,
     color: '#666',
     fontWeight: '500',
+  },
+  categoryNameActive: {
+    color: ShopFlareColors.accent,
+    fontWeight: '700',
   },
   flashSaleHeader: {
     flexDirection: 'row',
@@ -591,10 +638,10 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   timerBox: {
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   timerText: {
     color: '#FFF',
@@ -604,11 +651,11 @@ const styles = StyleSheet.create({
   timerSeparator: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: ShopFlareColors.primary,
+    color: ShopFlareColors.accent,
     marginHorizontal: 2,
   },
   filterContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   filterTab: {
     paddingHorizontal: 20,
@@ -622,6 +669,11 @@ const styles = StyleSheet.create({
   filterTabActive: {
     backgroundColor: ShopFlareColors.primary,
     borderColor: ShopFlareColors.primary,
+    shadowColor: ShopFlareColors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   filterTabText: {
     fontSize: 14,
@@ -629,6 +681,29 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   filterTabTextActive: {
+    color: '#FFF',
+  },
+  subcategoryContainer: {
+    marginBottom: 16,
+  },
+  subcategoryChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 16,
+    backgroundColor: '#FFF',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: ShopFlareColors.accent,
+  },
+  subcategoryChipActive: {
+    backgroundColor: ShopFlareColors.accent,
+  },
+  subcategoryText: {
+    fontSize: 12,
+    color: ShopFlareColors.accent,
+    fontWeight: '500',
+  },
+  subcategoryTextActive: {
     color: '#FFF',
   },
   productsGrid: {
@@ -663,10 +738,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   productImageContainer: {
     height: 140,
@@ -689,6 +764,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     padding: 6,
     borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   productInfo: {
     padding: 12,

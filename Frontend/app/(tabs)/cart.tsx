@@ -234,11 +234,16 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   shopButton: {
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 25,
     marginTop: 24,
+    shadowColor: ShopFlareColors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   shopButtonText: {
     color: '#FFF',
@@ -314,7 +319,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   quantityBtnPlus: {
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     borderRadius: 8,
   },
   quantity: {
@@ -340,7 +345,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   applyButton: {
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 10,
@@ -395,13 +400,18 @@ const styles = StyleSheet.create({
   },
   checkoutButton: {
     flexDirection: 'row',
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 16,
     gap: 8,
+    shadowColor: ShopFlareColors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   checkoutButtonText: {
     color: '#FFF',

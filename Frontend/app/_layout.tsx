@@ -1,7 +1,8 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+import { useEffect } from 'react';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
@@ -10,11 +11,23 @@ import { ActivityIndicator, View } from 'react-native';
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { isSignedIn, isLoading } = useAuth();
+  const { isSignedIn, isInitialLoading } = useAuth();
+  const router = useRouter();
+  const segments = useSegments();
 
-  console.log('RootLayoutNav rendering:', { isSignedIn, isLoading });
+  useEffect(() => {
+    if (isInitialLoading) return;
 
-  if (isLoading) {
+    const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
+
+    if (isSignedIn && inAuthGroup) {
+      router.replace('/(tabs)');
+    } else if (!isSignedIn && !inAuthGroup) {
+      router.replace('/login');
+    }
+  }, [isSignedIn, isInitialLoading]);
+
+  if (isInitialLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" />
@@ -25,7 +38,7 @@ function RootLayoutNav() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <FashionProvider>
-        <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
+        <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
           {!isSignedIn ? (
             <>
               <Stack.Screen name="login/index" />
@@ -33,10 +46,8 @@ function RootLayoutNav() {
             </>
           ) : (
             <>
-              <Stack.Screen name="fashion" />
-              <Stack.Screen name="fashion/productDetails" />
-              <Stack.Screen name="fashion/chat" />
-              <Stack.Screen name="fashion/checkout" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="productDetail" />
               <Stack.Screen name="editProfile" />
               <Stack.Screen name="addresses" />
               <Stack.Screen name="checkout" />
@@ -58,9 +69,7 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <FashionProvider>
-        <RootLayoutNav />
-      </FashionProvider>
+      <RootLayoutNav />
     </AuthProvider>
   );
 }

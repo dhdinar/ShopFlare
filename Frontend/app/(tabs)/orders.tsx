@@ -310,7 +310,7 @@ export default function OrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: '#F8F9FA',
   },
   header: {
     flexDirection: 'row',
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   filterButtonActive: {
-    backgroundColor: '#000',
+    backgroundColor: ShopFlareColors.accent,
   },
   filterText: {
     fontSize: 14,
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     color: '#EF5350',
   },
   nextStatusBtn: {
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,

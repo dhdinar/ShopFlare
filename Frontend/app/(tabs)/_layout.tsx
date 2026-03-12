@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { HapticTab } from '@/components/haptic-tab';
@@ -14,8 +14,8 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: ShopFlareColors.primary,
-        tabBarInactiveTintColor: '#999',
+        tabBarActiveTintColor: ShopFlareColors.accent,
+        tabBarInactiveTintColor: '#AAAAAA',
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
@@ -24,16 +24,16 @@ export default function TabLayout() {
           elevation: 20,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.1,
-          shadowRadius: 12,
-          height: 60,
-          paddingBottom: 4,
-          paddingTop: 4,
-          marginBottom: 0,
+          shadowOpacity: 0.08,
+          shadowRadius: 16,
+          height: Platform.OS === 'ios' ? 88 : 64,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 8,
+          paddingTop: 6,
         },
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '600',
+          letterSpacing: 0.2,
         },
       }}>
       {/* Home - visible to all */}
@@ -134,9 +134,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   cartIconBgActive: {
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     marginTop: -12,
-    shadowColor: ShopFlareColors.primary,
+    shadowColor: ShopFlareColors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

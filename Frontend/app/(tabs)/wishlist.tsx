@@ -195,11 +195,16 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   shopButton: {
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 25,
     marginTop: 24,
+    shadowColor: ShopFlareColors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   shopButtonText: {
     color: '#FFF',
@@ -283,7 +288,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cartButton: {
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     padding: 10,
     borderRadius: 10,
   },
@@ -292,6 +297,6 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: ShopFlareColors.primary,
+    borderColor: '#E0E0E0',
   },
 });

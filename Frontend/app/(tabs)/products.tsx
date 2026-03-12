@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback } from 'react';
 import { getProducts, createProduct, updateProduct, deleteProduct, Product, ProductCreateData } from '@/services/productService';
 import * as ImagePicker from 'expo-image-picker';
+import { ShopFlareColors } from '@/constants/theme';
+import { FASHION_CATEGORIES, FASHION_SUBCATEGORIES } from '@/constants/fashionData';
 
 export default function ProductsScreen() {
   const { user, accessToken } = useAuth();
@@ -25,6 +27,7 @@ export default function ProductsScreen() {
   const [productPrice, setProductPrice] = useState('');
   const [productSalePrice, setProductSalePrice] = useState('');
   const [productCategory, setProductCategory] = useState('');
+  const [productSubcategory, setProductSubcategory] = useState('');
   const [productImage, setProductImage] = useState('');
   const [productStock, setProductStock] = useState('');
   const [selectedImages, setSelectedImages] = useState<{uri: string, base64: string, type: string}[]>([]);
@@ -57,6 +60,7 @@ export default function ProductsScreen() {
     setProductPrice('');
     setProductSalePrice('');
     setProductCategory('');
+    setProductSubcategory('');
     setProductImage('');
     setProductStock('');
     setSelectedImages([]);
@@ -75,6 +79,7 @@ export default function ProductsScreen() {
     setProductPrice(product.price.toString());
     setProductSalePrice(product.sale_price?.toString() || '');
     setProductCategory(product.category || '');
+    setProductSubcategory(product.subcategory || '');
     setProductImage(product.image || '');
     setProductStock(product.stock.toString());
     setSelectedImages([]);
@@ -132,6 +137,7 @@ export default function ProductsScreen() {
       price: parseFloat(productPrice),
       sale_price: productSalePrice ? parseFloat(productSalePrice) : undefined,
       category: productCategory || undefined,
+      subcategory: productSubcategory || undefined,
       image: productImage || undefined,
       stock: parseInt(productStock) || 0,
       is_active: true,
@@ -357,14 +363,55 @@ export default function ProductsScreen() {
               placeholderTextColor="#999"
             />
 
-            <Text style={styles.inputLabel}>Category</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="e.g., Clothing, Accessories"
-              value={productCategory}
-              onChangeText={setProductCategory}
-              placeholderTextColor="#999"
-            />
+            <Text style={styles.inputLabel}>Category *</Text>
+            <View style={styles.categoryPickerContainer}>
+              {FASHION_CATEGORIES.map((cat) => (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[
+                    styles.categoryPickerItem,
+                    productCategory === cat.name && styles.categoryPickerItemActive,
+                  ]}
+                  onPress={() => {
+                    setProductCategory(cat.name);
+                    setProductSubcategory('');
+                  }}
+                >
+                  <Ionicons
+                    name={cat.icon as any}
+                    size={20}
+                    color={productCategory === cat.name ? '#FFF' : ShopFlareColors.accent}
+                  />
+                  <Text style={[
+                    styles.categoryPickerText,
+                    productCategory === cat.name && styles.categoryPickerTextActive,
+                  ]}>{cat.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {productCategory ? (
+              <>
+                <Text style={styles.inputLabel}>Subcategory *</Text>
+                <View style={styles.subcategoryPickerContainer}>
+                  {(FASHION_SUBCATEGORIES[productCategory] || []).map((sub) => (
+                    <TouchableOpacity
+                      key={sub}
+                      style={[
+                        styles.subcategoryPickerItem,
+                        productSubcategory === sub && styles.subcategoryPickerItemActive,
+                      ]}
+                      onPress={() => setProductSubcategory(sub)}
+                    >
+                      <Text style={[
+                        styles.subcategoryPickerText,
+                        productSubcategory === sub && styles.subcategoryPickerTextActive,
+                      ]}>{sub}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            ) : null}
 
             <Text style={styles.inputLabel}>Product Images (Max 4)</Text>
             <View style={styles.imagePickerContainer}>
@@ -408,7 +455,7 @@ export default function ProductsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: '#F8F9FA',
   },
   header: {
     flexDirection: 'row',
@@ -428,10 +475,15 @@ const styles = StyleSheet.create({
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: ShopFlareColors.accent,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
+    shadowColor: ShopFlareColors.accent,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   addButtonText: {
     color: '#FFF',
@@ -602,10 +654,15 @@ const styles = StyleSheet.create({
   addFirstButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: ShopFlareColors.accent,
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 25,
+    shadowColor: ShopFlareColors.accent,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   addFirstButtonText: {
     color: '#FFF',
@@ -638,7 +695,7 @@ const styles = StyleSheet.create({
   },
   modalSave: {
     fontSize: 16,
-    color: '#007AFF',
+    color: ShopFlareColors.accent,
     fontWeight: '600',
   },
   modalContent: {
@@ -704,5 +761,57 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#666',
     marginTop: 4,
+  },
+  categoryPickerContainer: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  categoryPickerItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: ShopFlareColors.accent,
+    backgroundColor: '#FFF',
+  },
+  categoryPickerItemActive: {
+    backgroundColor: ShopFlareColors.accent,
+  },
+  categoryPickerText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: ShopFlareColors.accent,
+  },
+  categoryPickerTextActive: {
+    color: '#FFF',
+  },
+  subcategoryPickerContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  subcategoryPickerItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#DDD',
+    backgroundColor: '#FAFAFA',
+  },
+  subcategoryPickerItemActive: {
+    backgroundColor: ShopFlareColors.accent,
+    borderColor: ShopFlareColors.accent,
+  },
+  subcategoryPickerText: {
+    fontSize: 13,
+    color: '#555',
+  },
+  subcategoryPickerTextActive: {
+    color: '#FFF',
+    fontWeight: '600',
   },
 });

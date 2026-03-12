@@ -17,6 +17,7 @@ export interface Product {
   price: number;
   sale_price?: number;
   category?: string;
+  subcategory?: string;
   image?: string;
   stock: number;
   is_active: boolean;
@@ -35,6 +36,7 @@ export interface ProductCreateData {
   price: number;
   sale_price?: number;
   category?: string;
+  subcategory?: string;
   image?: string;
   stock: number;
   is_active?: boolean;

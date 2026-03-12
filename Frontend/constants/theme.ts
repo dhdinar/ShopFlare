@@ -33,15 +33,25 @@ export const ShopFlareColors = {
   primaryLight: '#444444',
   primaryDark: '#0D0D0D',
   secondary: '#FFFFFF',
-  background: '#FFFFFF',
+  accent: '#FF6B35',       // Warm orange — the "flare" in ShopFlare
+  accentLight: '#FFF4EE',  // Accent tint for backgrounds / badges
+  accentDark: '#E55A2B',   // Pressed state
+  background: '#F8F9FA',
   cardBackground: '#FFFFFF',
   text: '#1A1A1A',
   textSecondary: '#666666',
   textLight: '#999999',
   border: '#E8E8E8',
+  borderLight: '#F0F0F0',
   success: '#4CAF50',
+  successLight: '#E8F5E9',
   warning: '#FFC107',
+  warningLight: '#FFF8E1',
   error: '#F44336',
+  errorLight: '#FFEBEE',
+  info: '#2196F3',
+  infoLight: '#E3F2FD',
+  skeleton: '#E8E8E8',
 };
 
 export const Fonts = Platform.select({

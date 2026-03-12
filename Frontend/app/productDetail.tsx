@@ -1,7 +1,7 @@
-import { StyleSheet, View, ScrollView, TouchableOpacity, TextInput, FlatList, ActivityIndicator, Alert, Dimensions, NativeSyntheticEvent, NativeScrollEvent, Platform } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, TextInput, FlatList, ActivityIndicator, Alert, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useFashion, Product } from '@/context/FashionContext';
@@ -9,7 +9,6 @@ import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
 import { getProduct, getProductReviews, createReview, Review, ReviewsResponse } from '@/services/productService';
-import { API_BASE_URL } from '@/services/productService';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -28,15 +27,6 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   'default': '🛍️',
 };
 
-interface Message {
-  id: number;
-  message: string;
-  sender_username: string;
-  receiver_username: string;
-  is_from_brand: boolean;
-  timestamp: string;
-}
-
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -47,8 +37,6 @@ export default function ProductDetailScreen() {
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
-  const [showChat, setShowChat] = useState(false);
-  const [messageText, setMessageText] = useState('');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState(0); // 0 = Details, 1 = Reviews
   
@@ -62,10 +50,6 @@ export default function ProductDetailScreen() {
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewComment, setReviewComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  
-  // Chat state
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loadingMessages, setLoadingMessages] = useState(false);
   
   const isWishlisted = product ? isInWishlist(product.id) : false;
 
@@ -201,45 +185,6 @@ export default function ProductDetailScreen() {
     }
   };
 
-  const fetchMessages = async () => {
-    if (!product) return;
-    setLoadingMessages(true);
-    try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
-      const res = await fetch(`${API_BASE_URL}/auth/products/${product.id}/messages/`, { headers });
-      if (!res.ok) throw new Error('Failed to fetch messages');
-      const data = await res.json();
-      setMessages(data);
-    } catch (e) {
-      setMessages([]);
-    } finally {
-      setLoadingMessages(false);
-    }
-  };
-
-  const handleSendMessage = async () => {
-    if (!messageText.trim() || !product) return;
-    try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
-      const body = {
-        product_id: product.id,
-        message: messageText,
-      };
-      const res = await fetch(`${API_BASE_URL}/auth/messages/send/`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error('Failed to send message');
-      setMessageText('');
-      fetchMessages();
-    } catch (e) {
-      Alert.alert('Error', 'Failed to send message');
-    }
-  };
-
   const getProductEmoji = (category?: string) => {
     if (!category) return CATEGORY_EMOJIS.default;
     return CATEGORY_EMOJIS[category] || CATEGORY_EMOJIS.default;
@@ -264,18 +209,6 @@ export default function ProductDetailScreen() {
     } else {
       Alert.alert('Please Select', 'Please select size and color', [{ text: 'OK' }]);
     }
-  };
-
-  const renderMessage = ({ item }: { item: Message }) => {
-    const isMine = (user?.username && item.sender_username === user.username) || (user?.user_type === 'brand' && item.is_from_brand);
-    return (
-      <View style={[styles.messageBubble, isMine ? styles.customerMessage : styles.sellerMessage]}>
-        <ThemedText style={[styles.messageText, !isMine && styles.sellerMessageText]}>{item.message}</ThemedText>
-        <ThemedText style={[styles.messageTime, !isMine && styles.sellerMessageTime]}>
-          {new Date(item.timestamp).toLocaleTimeString()}
-        </ThemedText>
-      </View>
-    );
   };
 
   if (isLoading) {
@@ -503,7 +436,20 @@ export default function ProductDetailScreen() {
                       {/* Chat Button */}
                       <TouchableOpacity 
                         style={styles.chatButton}
-                        onPress={() => setShowChat(!showChat)}
+                        onPress={() => {
+                          if (!isSignedIn) {
+                            Alert.alert('Login Required', 'Please login to ask a question');
+                            return;
+                          }
+                          router.push({
+                            pathname: '/(tabs)/chat',
+                            params: {
+                              productId: product.id,
+                              brandName: product.brand_name || 'Brand',
+                              productName: product.name,
+                            },
+                          });
+                        }}
                       >
                         <Ionicons name="chatbubble-outline" size={20} color={ShopFlareColors.primary} />
                         <ThemedText style={styles.chatButtonText}>Ask a Question</ThemedText>
@@ -552,7 +498,23 @@ export default function ProductDetailScreen() {
                       {reviews.map((review) => (
                         <View key={review.id} style={styles.reviewItem}>
                           <View style={styles.reviewHeader}>
-                            <View style={styles.reviewerInfo}>
+                            <TouchableOpacity
+                              style={styles.reviewerInfo}
+                              onPress={() => {
+                                if (!isSignedIn) {
+                                  Alert.alert('Login Required', 'Please login to send a message');
+                                  return;
+                                }
+                                router.push({
+                                  pathname: '/(tabs)/chat',
+                                  params: {
+                                    productId: product.id,
+                                    brandName: product.brand_name || 'Brand',
+                                    productName: product.name,
+                                  },
+                                });
+                              }}
+                            >
                               <View style={styles.reviewerAvatar}>
                                 <ThemedText style={styles.reviewerInitial}>
                                   {review.username.charAt(0).toUpperCase()}
@@ -564,7 +526,7 @@ export default function ProductDetailScreen() {
                                   {new Date(review.created_at).toLocaleDateString()}
                                 </ThemedText>
                               </View>
-                            </View>
+                            </TouchableOpacity>
                             <View style={styles.reviewStars}>
                               {[1, 2, 3, 4, 5].map((star) => (
                                 <Ionicons 
@@ -606,7 +568,7 @@ export default function ProductDetailScreen() {
                         maxLength={500}
                       />
                       <TouchableOpacity 
-                        style={[styles.reviewSendButton, isSubmittingReview && styles.sendButtonDisabled]}
+                        style={[styles.reviewSendButton, isSubmittingReview && { opacity: 0.5 }]}
                         onPress={handleSubmitReview}
                         disabled={isSubmittingReview}
                       >
@@ -625,39 +587,6 @@ export default function ProductDetailScreen() {
         />
       </ScrollView>
 
-      {/* Chat Modal/Portal */}
-      {showChat && (
-        <View style={styles.chatContainer}>
-          <View style={styles.chatHeader}>
-            <ThemedText style={styles.chatTitle}>Chat with Seller</ThemedText>
-            <TouchableOpacity style={styles.closeButton} onPress={() => setShowChat(false)}>
-              <Ionicons name="close" size={24} color={ShopFlareColors.primary} />
-            </TouchableOpacity>
-          </View>
-          {loadingMessages ? (
-            <ActivityIndicator size="small" color={ShopFlareColors.primary} />
-          ) : (
-            <FlatList
-              data={messages}
-              renderItem={renderMessage}
-              keyExtractor={item => item.id.toString()}
-              style={{ maxHeight: 250 }}
-            />
-          )}
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Type your message..."
-              value={messageText}
-              onChangeText={setMessageText}
-              multiline
-            />
-            <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage} disabled={!messageText.trim()}>
-              <Ionicons name="send" size={20} color="#FFF" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
     </ThemedView>
   );
 }
@@ -744,7 +673,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   imageDotActive: {
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     width: 20,
   },
   infoContainer: {
@@ -815,8 +744,8 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   discountBadge: {
-    backgroundColor: ShopFlareColors.primary,
-    paddingHorizontal: 8,
+    backgroundColor: ShopFlareColors.accent,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
   },
@@ -911,7 +840,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   quantityButtonPlus: {
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
   },
   quantityButtonText: {
     fontSize: 20,
@@ -931,12 +860,12 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
     borderRadius: 14,
-    backgroundColor: ShopFlareColors.primary,
-    shadowColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
+    shadowColor: ShopFlareColors.accent,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.35,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 5,
     marginTop: 8,
   },
   addToCartText: {
@@ -959,95 +888,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: ShopFlareColors.primary,
-  },
-  chatContainer: {
-    marginHorizontal: 12,
-    marginBottom: 20,
-    padding: 16,
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    gap: 12,
-  },
-  chatHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  chatTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#1A1A1A',
-  },
-  closeButton: {
-    marginLeft: 12,
-    padding: 4,
-  },
-  messageBubble: {
-    maxWidth: '80%',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 16,
-    marginVertical: 4,
-  },
-  customerMessage: {
-    alignSelf: 'flex-end',
-    backgroundColor: ShopFlareColors.primary,
-    borderBottomRightRadius: 4,
-  },
-  sellerMessage: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#F5F5F5',
-    borderBottomLeftRadius: 4,
-  },
-  messageText: {
-    fontSize: 14,
-    color: '#FFFFFF',
-  },
-  sellerMessageText: {
-    color: '#1A1A1A',
-  },
-  messageTime: {
-    fontSize: 11,
-    marginTop: 4,
-    opacity: 0.7,
-    color: '#FFF',
-  },
-  sellerMessageTime: {
-    color: '#999',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'flex-end',
-    marginTop: 8,
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#E8E8E8',
-    borderRadius: 24,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    maxHeight: 100,
-    fontSize: 14,
-    backgroundColor: '#F8F9FA',
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: ShopFlareColors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: ShopFlareColors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sendButtonDisabled: {
-    opacity: 0.5,
   },
   // Reviews styles
   reviewsContainer: {
@@ -1247,7 +1087,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },

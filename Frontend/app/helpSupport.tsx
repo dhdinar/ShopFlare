@@ -197,7 +197,7 @@ export default function HelpSupportScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -285,11 +285,16 @@ const styles = StyleSheet.create({
   },
   textArea: { height: 100, textAlignVertical: 'top', paddingTop: 12 },
   sendButton: {
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 4,
+    shadowColor: ShopFlareColors.accent,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   sendButtonText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
   footer: {

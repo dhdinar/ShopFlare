@@ -54,7 +54,7 @@ function SettingRow({
         <Switch
           value={value}
           onValueChange={onToggle}
-          trackColor={{ false: '#E0E0E0', true: ShopFlareColors.primary }}
+          trackColor={{ false: '#E0E0E0', true: ShopFlareColors.accent }}
           thumbColor="#FFF"
         />
       ) : showArrow ? (
@@ -204,7 +204,7 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -26,6 +26,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
+  isInitialLoading: boolean;
   isSignedIn: boolean;
   isBrand: boolean;
   accessToken: string | null;
@@ -46,7 +47,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
 
@@ -57,40 +59,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const checkAuthStatus = async () => {
     try {
-      console.log('AuthContext: Checking auth status...');
-      setIsLoading(true);
+      setIsInitialLoading(true);
       const token = await tokenStorage.getAccessToken();
+      const refresh = await tokenStorage.getRefreshToken();
       const storedUser = await tokenStorage.getUser();
-
-      console.log('AuthContext: Token exists:', !!token);
-      console.log('AuthContext: User exists:', !!storedUser);
 
       if (token && storedUser) {
         setAccessToken(token);
+        setRefreshToken(refresh);
         setUser(storedUser);
-        console.log('AuthContext: User restored from storage:', storedUser.username);
-      } else {
-        console.log('AuthContext: No stored auth data');
       }
     } catch (error) {
       console.error('Failed to check auth status:', error);
     } finally {
-      setIsLoading(false);
-      console.log('AuthContext: Auth check complete');
+      setIsInitialLoading(false);
     }
   };
 
   const login = async (username: string, password: string) => {
     setIsLoading(true);
     try {
-      console.log('AuthContext: Attempting login for', username);
       const { user: userData, tokens } = await authService.login({
         username,
         password,
       });
-
-      console.log('AuthContext: Login successful, user data:', userData);
-      console.log('AuthContext: Setting user and tokens...');
       
       setAccessToken(tokens.access);
       setRefreshToken(tokens.refresh);
@@ -98,10 +90,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       await tokenStorage.saveTokens(tokens.access, tokens.refresh);
       await tokenStorage.saveUser(userData);
-      
-      console.log('AuthContext: Auth state updated, isSignedIn should be true now');
     } catch (error: any) {
-      console.error('AuthContext: Login error:', error.message);
       throw error;
     } finally {
       setIsLoading(false);
@@ -119,6 +108,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       await tokenStorage.saveTokens(tokens.access, tokens.refresh);
       await tokenStorage.saveUser(userData);
+    } catch (error: any) {
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -130,7 +121,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await authService.logout(accessToken);
       }
     } catch (error) {
-      console.error('Error during logout:', error);
+      // Logout errors are non-critical
     } finally {
       setUser(null);
       setAccessToken(null);
@@ -142,27 +133,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateProfile = async (data: Partial<User>) => {
     if (!accessToken) throw new Error('Not authenticated');
 
-    setIsLoading(true);
     try {
       const updatedUser = await authService.updateProfile(accessToken, data);
       setUser(updatedUser);
       await tokenStorage.saveUser(updatedUser);
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      throw error;
     }
   };
 
   const updateBrandProfile = async (data: Partial<User>) => {
     if (!accessToken) throw new Error('Not authenticated');
 
-    setIsLoading(true);
     try {
       const updatedUser = await authService.updateBrandProfile(accessToken, data);
       const merged = { ...user, ...updatedUser } as User;
       setUser(merged);
       await tokenStorage.saveUser(merged);
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      throw error;
     }
   };
 
@@ -175,21 +164,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const changePassword = async (oldPassword: string, newPassword: string, newPassword2: string) => {
     if (!accessToken) throw new Error('Not authenticated');
 
-    setIsLoading(true);
     try {
       await authService.changePassword(accessToken, {
         old_password: oldPassword,
         new_password: newPassword,
         new_password2: newPassword2,
       });
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      throw error;
     }
   };
 
   const value: AuthContextType = {
     user,
     isLoading,
+    isInitialLoading,
     isSignedIn: !!user,
     isBrand: user?.user_type === 'brand',
     accessToken,

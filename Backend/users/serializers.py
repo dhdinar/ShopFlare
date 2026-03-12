@@ -14,7 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 
                   'phone_number', 'bio', 'is_email_verified', 'user_type']
-        read_only_fields = ['id', 'is_email_verified']
+        read_only_fields = ['id', 'is_email_verified', 'email']
     
     def get_user_type(self, obj):
         return 'user'
@@ -29,7 +29,7 @@ class BrandSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'phone_number', 
                   'brand_description', 'brand_logo', 'brand_website', 
                   'brand_address', 'is_brand_verified', 'user_type']
-        read_only_fields = ['id', 'is_brand_verified']
+        read_only_fields = ['id', 'is_brand_verified', 'email']
     
     def get_user_type(self, obj):
         return 'brand'
@@ -157,7 +157,7 @@ class ProductSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Product
-        fields = ['id', 'name', 'description', 'price', 'sale_price', 'category', 
+        fields = ['id', 'name', 'description', 'price', 'sale_price', 'category', 'subcategory',
                   'image', 'stock', 'is_active', 'is_on_sale', 'brand_name', 
                   'created_at', 'updated_at', 'images', 'average_rating', 'total_ratings']
         read_only_fields = ['id', 'created_at', 'updated_at', 'brand_name', 'is_on_sale']
@@ -178,7 +178,7 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Product
-        fields = ['name', 'description', 'price', 'sale_price', 'category', 
+        fields = ['name', 'description', 'price', 'sale_price', 'category', 'subcategory',
                   'image', 'stock', 'is_active']
     
     def create(self, validated_data):

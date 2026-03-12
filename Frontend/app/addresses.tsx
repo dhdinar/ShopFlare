@@ -322,7 +322,7 @@ export default function AddressesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -389,10 +389,15 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 20, fontWeight: '700', marginTop: 16, marginBottom: 6 },
   emptySubtitle: { fontSize: 14, color: '#777', textAlign: 'center', marginBottom: 24 },
   addFirstBtn: {
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 32,
+    shadowColor: ShopFlareColors.accent,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   addFirstBtnText: { color: '#FFF', fontWeight: '700', fontSize: 15 },
   // Modal styles
@@ -437,7 +442,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: '#F0F0F0',
   },
-  labelChipActive: { backgroundColor: ShopFlareColors.primary },
+  labelChipActive: { backgroundColor: ShopFlareColors.accent },
   labelChipText: { fontSize: 13, fontWeight: '600', color: '#666' },
   labelChipTextActive: { color: '#FFF' },
   defaultToggle: {
@@ -448,7 +453,7 @@ const styles = StyleSheet.create({
   },
   defaultToggleText: { fontSize: 14, fontWeight: '600' },
   saveButton: {
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

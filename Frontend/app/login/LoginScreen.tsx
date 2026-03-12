@@ -126,7 +126,7 @@ export default function LoginScreen({ onNavigateToRegister }: LoginScreenProps) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: ShopFlareColors.background,
+    backgroundColor: '#F8F9FA',
   },
   scrollContent: {
     flexGrow: 1,
@@ -199,14 +199,14 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   button: {
-    backgroundColor: ShopFlareColors.primary,
+    backgroundColor: ShopFlareColors.accent,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
     marginTop: 24,
-    shadowColor: ShopFlareColors.primary,
+    shadowColor: ShopFlareColors.accent,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.35,
     shadowRadius: 8,
     elevation: 5,
   },
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   linkBold: {
-    color: ShopFlareColors.primary,
+    color: ShopFlareColors.accent,
     fontWeight: '600',
   },
   forgotPassword: {

@@ -83,50 +83,34 @@ export const register = async (data: RegisterData): Promise<{ user: User; tokens
 
 // Login user
 export const login = async (data: LoginData): Promise<{ user: User; tokens: AuthTokens }> => {
-  try {
-    console.log('API_BASE_URL:', API_BASE_URL);
-    console.log('Sending login request to:', `${API_BASE_URL}/auth/login/`);
-    console.log('Request data:', data);
-    
-    const response = await fetch(`${API_BASE_URL}/auth/login/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
+  const response = await fetch(`${API_BASE_URL}/auth/login/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
 
-    console.log('Response status:', response.status);
-    
-    // Get response text first to see what we're getting
-    const responseText = await response.text();
-    console.log('Response text:', responseText.substring(0, 500)); // First 500 chars
+  const responseText = await response.text();
 
-    if (!response.ok) {
-      try {
-        const error = JSON.parse(responseText);
-        console.error('Login error response:', error);
-        throw new Error(error.detail || error.message || 'Login failed');
-      } catch (parseError) {
-        // If not JSON, it's HTML error page
-        console.error('Non-JSON error response, status:', response.status);
-        throw new Error(`Login failed with status ${response.status}`);
-      }
-    }
-
+  if (!response.ok) {
     try {
-      const result = JSON.parse(responseText);
-      console.log('Login successful, user:', result.user?.username);
-      return {
-        user: result.user,
-        tokens: { access: result.access, refresh: result.refresh },
-      };
+      const error = JSON.parse(responseText);
+      throw new Error(error.detail || error.message || 'Login failed');
     } catch (parseError) {
-      throw new Error('Invalid JSON response from server');
+      if (parseError instanceof Error && parseError.message.includes('Login failed')) throw parseError;
+      throw new Error(`Login failed with status ${response.status}`);
     }
-  } catch (error: any) {
-    console.error('Login request error:', error.message);
-    throw error;
+  }
+
+  try {
+    const result = JSON.parse(responseText);
+    return {
+      user: result.user,
+      tokens: { access: result.access, refresh: result.refresh },
+    };
+  } catch (parseError) {
+    throw new Error('Invalid JSON response from server');
   }
 };
 

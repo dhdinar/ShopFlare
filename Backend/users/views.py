@@ -7,7 +7,6 @@ from django.contrib.auth import authenticate, get_user_model
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-import base64
 
 
 from .serializers import (UserSerializer, BrandSerializer, RegisterSerializer,
@@ -299,6 +298,8 @@ def product_list_view(request):
 @parser_classes([JSONParser, MultiPartParser, FormParser])
 def product_create_view(request):
     """Create a new product with images (brand only)"""
+    from django.db import transaction
+
     brand = get_brand_from_request(request)
     if not brand:
         brand = get_brand_from_token(request)
@@ -306,30 +307,30 @@ def product_create_view(request):
     if not brand:
         return Response({'detail': 'Brand authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
     
-    serializer = ProductCreateUpdateSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    product = serializer.save(brand=brand)
-    
-    # Handle base64 images (max 4)
-    # Expecting: images = [{"data": "base64string", "type": "image/jpeg"}, ...]
+    # Validate images count BEFORE creating the product
     images_data = request.data.get('images', [])
     if len(images_data) > 4:
         return Response({'detail': 'Maximum 4 images allowed'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    for index, img in enumerate(images_data):
-        if isinstance(img, dict) and 'data' in img:
-            # Remove data URI prefix if present
-            image_data = img['data']
-            if ',' in image_data:
-                image_data = image_data.split(',')[1]
-            
-            image_type = img.get('type', 'image/jpeg')
-            ProductImage.objects.create(
-                product=product,
-                image_data=image_data,
-                image_type=image_type,
-                order=index
-            )
+
+    serializer = ProductCreateUpdateSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    with transaction.atomic():
+        product = serializer.save(brand=brand)
+        
+        for index, img in enumerate(images_data):
+            if isinstance(img, dict) and 'data' in img:
+                image_data = img['data']
+                if ',' in image_data:
+                    image_data = image_data.split(',')[1]
+                
+                image_type = img.get('type', 'image/jpeg')
+                ProductImage.objects.create(
+                    product=product,
+                    image_data=image_data,
+                    image_type=image_type,
+                    order=index
+                )
     
     return Response(ProductSerializer(product, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
@@ -706,23 +707,25 @@ def user_reviews_view(request):
 @permission_classes([IsAuthenticated])
 def product_messages_view(request, product_id):
     """Get all messages for a product between the current user/brand and the other party"""
+    from django.db.models import Q
+
     product = Product.objects.filter(id=product_id).first()
     if not product:
         return Response({'detail': 'Product not found'}, status=404)
 
     # Determine user type
     user = request.user
-    is_brand = hasattr(user, 'is_brand') and user.is_brand
+    is_brand = isinstance(user, BrandUser)
     
     if is_brand:
-        # Brand: show all messages for this product where brand is sender or receiver
-        messages = Message.objects.filter(product=product, 
-            sender_brand=product.brand) | Message.objects.filter(product=product, receiver_brand=product.brand)
+        messages = Message.objects.filter(
+            Q(product=product) & (Q(sender_brand=product.brand) | Q(receiver_brand=product.brand))
+        ).distinct().order_by('timestamp')
     else:
-        # Customer: show all messages for this product where user is sender or receiver
-        messages = Message.objects.filter(product=product, 
-            sender_user=user) | Message.objects.filter(product=product, receiver_user=user)
-    messages = messages.order_by('timestamp')
+        messages = Message.objects.filter(
+            Q(product=product) & (Q(sender_user=user) | Q(receiver_user=user))
+        ).distinct().order_by('timestamp')
+
     serializer = MessageSerializer(messages, many=True)
     return Response(serializer.data)
 
@@ -731,7 +734,7 @@ def product_messages_view(request, product_id):
 def send_message_view(request):
     """Send a message for a product chat (customer or brand)"""
     data = request.data
-    product_id = data.get('product')
+    product_id = data.get('product') or data.get('product_id')
     message_text = data.get('message')
     if not product_id or not message_text:
         return Response({'detail': 'product and message are required'}, status=400)
@@ -739,15 +742,122 @@ def send_message_view(request):
     if not product:
         return Response({'detail': 'Product not found'}, status=404)
     user = request.user
-    is_brand = hasattr(user, 'is_brand') and user.is_brand
+    is_brand = isinstance(user, BrandUser)
     msg = Message(product=product, message=message_text)
     if is_brand:
         msg.sender_brand = product.brand
-        # For now, send to all users who messaged this product (or null)
+        # Find the user who started this conversation
+        first_msg = Message.objects.filter(
+            product=product, is_from_brand=False
+        ).order_by('timestamp').first()
+        if first_msg and first_msg.sender_user:
+            msg.receiver_user = first_msg.sender_user
     else:
         msg.sender_user = user
         msg.receiver_brand = product.brand
     msg.is_from_brand = is_brand
+    msg.save()
+    return Response(MessageSerializer(msg).data, status=201)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def conversations_list_view(request):
+    """Get all conversations for the current user/brand, grouped by product."""
+    from django.db.models import Q, Max, Count
+    from collections import OrderedDict
+
+    user = request.user
+    is_brand = isinstance(user, BrandUser)
+
+    if is_brand:
+        brand = user.brand
+        msgs = Message.objects.filter(
+            Q(sender_brand=brand) | Q(receiver_brand=brand)
+        ).select_related('product', 'sender_user', 'sender_brand', 'receiver_user', 'receiver_brand'
+        ).order_by('-timestamp')
+    else:
+        msgs = Message.objects.filter(
+            Q(sender_user=user) | Q(receiver_user=user)
+        ).select_related('product', 'sender_user', 'sender_brand', 'receiver_user', 'receiver_brand'
+        ).order_by('-timestamp')
+
+    # Group by product
+    seen_products = OrderedDict()
+    for msg in msgs:
+        pid = msg.product_id
+        if pid not in seen_products:
+            product = msg.product
+            # Determine the other party name
+            if is_brand:
+                other_name = msg.sender_user.username if msg.sender_user else (msg.receiver_user.username if msg.receiver_user else 'Customer')
+            else:
+                other_name = product.brand.username if product.brand else 'Brand'
+
+            # Get product image
+            product_image = None
+            first_img = product.images.first()
+            if first_img and first_img.image_data:
+                import base64
+                product_image = f"data:{first_img.image_type};base64,{base64.b64encode(first_img.image_data).decode()}"
+
+            seen_products[pid] = {
+                'product_id': pid,
+                'product_name': product.name,
+                'product_image': product_image,
+                'brand_name': product.brand.username if product.brand else 'Unknown',
+                'other_party_name': other_name,
+                'last_message': msg.message,
+                'last_message_time': msg.timestamp.isoformat(),
+                'is_last_from_brand': msg.is_from_brand,
+                'unread_count': 0,
+            }
+
+    # Count unread (messages not from current user that are recent)
+    conversations = list(seen_products.values())
+    return Response(conversations)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_message_to_brand_view(request):
+    """Send a message to a brand (initiates or continues a product chat).
+    Used from review profile clicks where we know the brand username."""
+    data = request.data
+    brand_username = data.get('brand_username')
+    product_id = data.get('product_id')
+    message_text = data.get('message')
+
+    if not brand_username or not message_text:
+        return Response({'detail': 'brand_username and message are required'}, status=400)
+
+    brand = Brand.objects.filter(username=brand_username).first()
+    if not brand:
+        return Response({'detail': 'Brand not found'}, status=404)
+
+    user = request.user
+    is_brand = isinstance(user, BrandUser)
+
+    # If product_id provided, use that product; otherwise find or use the first product by brand
+    if product_id:
+        product = Product.objects.filter(id=product_id).first()
+        if not product:
+            return Response({'detail': 'Product not found'}, status=404)
+    else:
+        product = Product.objects.filter(brand=brand).first()
+        if not product:
+            return Response({'detail': 'No products found for this brand'}, status=404)
+
+    msg = Message(
+        product=product,
+        message=message_text,
+        is_from_brand=is_brand,
+    )
+    if is_brand:
+        msg.sender_brand = brand
+    else:
+        msg.sender_user = user
+        msg.receiver_brand = brand
     msg.save()
     return Response(MessageSerializer(msg).data, status=201)
 
@@ -821,6 +931,9 @@ def change_password_view(request):
 @permission_classes([AllowAny])
 def change_brand_password_view(request):
     """Change password for authenticated brand"""
+    from django.contrib.auth.password_validation import validate_password
+    from django.core.exceptions import ValidationError as DjangoValidationError
+
     brand = get_brand_from_token(request)
     if not brand:
         return Response({'detail': 'Brand authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -838,6 +951,12 @@ def change_brand_password_view(request):
 
     if new_password != new_password2:
         return Response({'detail': "Passwords didn't match"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Validate password strength
+    try:
+        validate_password(new_password)
+    except DjangoValidationError as e:
+        return Response({'detail': list(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
 
     brand.set_password(new_password)
     brand.save()
@@ -905,6 +1024,9 @@ def health(request):
 @permission_classes([IsAuthenticated])
 def checkout_view(request):
     """Place an order from the user's current cart"""
+    from django.db import transaction
+    from decimal import Decimal
+
     serializer = CheckoutSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     data = serializer.validated_data
@@ -951,44 +1073,58 @@ def checkout_view(request):
             )
 
     # Calculate totals
-    from decimal import Decimal
-    SHIPPING_COST = Decimal('0.00')  # Free shipping by default; customise as needed
+    SHIPPING_COST = Decimal('0.00')
     subtotal = sum(
         (item.product.sale_price if item.product.is_on_sale else item.product.price) * item.quantity
         for item in cart_items
     )
     total_amount = subtotal + SHIPPING_COST
 
-    # Create the order
-    order = Order.objects.create(
-        user=request.user,
-        payment_method=data.get('payment_method', 'cod'),
-        notes=data.get('notes', ''),
-        subtotal=subtotal,
-        shipping_cost=SHIPPING_COST,
-        total_amount=total_amount,
-        **shipping
-    )
+    # Use atomic transaction to prevent partial failures
+    with transaction.atomic():
+        # Lock product rows to prevent race conditions
+        product_ids = [item.product_id for item in cart_items]
+        products = {p.id: p for p in Product.objects.select_for_update().filter(id__in=product_ids)}
 
-    # Create order items and deduct stock
-    for item in cart_items:
-        unit_price = item.product.sale_price if item.product.is_on_sale else item.product.price
-        OrderItem.objects.create(
-            order=order,
-            product=item.product,
-            brand=item.product.brand,
-            product_name=item.product.name,
-            product_price=unit_price,
-            quantity=item.quantity,
-            selected_size=item.selected_size,
-            selected_color=item.selected_color,
+        # Re-check stock with locked rows
+        for item in cart_items:
+            product = products[item.product_id]
+            if product.stock < item.quantity:
+                return Response(
+                    {'detail': f'Insufficient stock for "{product.name}". Available: {product.stock}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Create the order
+        order = Order.objects.create(
+            user=request.user,
+            payment_method=data.get('payment_method', 'cod'),
+            notes=data.get('notes', ''),
+            subtotal=subtotal,
+            shipping_cost=SHIPPING_COST,
+            total_amount=total_amount,
+            **shipping
         )
-        # Deduct stock
-        item.product.stock -= item.quantity
-        item.product.save(update_fields=['stock'])
 
-    # Clear the cart
-    cart_items.delete()
+        # Create order items and deduct stock
+        for item in cart_items:
+            product = products[item.product_id]
+            unit_price = product.sale_price if product.is_on_sale else product.price
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                brand=product.brand,
+                product_name=product.name,
+                product_price=unit_price,
+                quantity=item.quantity,
+                selected_size=item.selected_size,
+                selected_color=item.selected_color,
+            )
+            product.stock -= item.quantity
+            product.save(update_fields=['stock'])
+
+        # Clear the cart
+        cart_items.delete()
 
     return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
@@ -1017,6 +1153,8 @@ def order_detail_view(request, order_id):
 @permission_classes([IsAuthenticated])
 def order_cancel_view(request, order_id):
     """Cancel a pending order (customer)"""
+    from django.db import transaction
+
     try:
         order = Order.objects.get(id=order_id, user=request.user)
     except Order.DoesNotExist:
@@ -1028,14 +1166,16 @@ def order_cancel_view(request, order_id):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Restore stock
-    for item in order.items.select_related('product'):
-        if item.product:
-            item.product.stock += item.quantity
-            item.product.save(update_fields=['stock'])
+    # Restore stock atomically
+    with transaction.atomic():
+        for item in order.items.select_related('product'):
+            if item.product:
+                item.product.stock += item.quantity
+                item.product.save(update_fields=['stock'])
 
-    order.status = 'cancelled'
-    order.save(update_fields=['status', 'updated_at'])
+        order.status = 'cancelled'
+        order.save(update_fields=['status', 'updated_at'])
+
     return Response(OrderSerializer(order).data)
 
 
