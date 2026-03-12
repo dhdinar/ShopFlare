@@ -716,14 +716,21 @@ def product_messages_view(request, product_id):
     # Determine user type
     user = request.user
     is_brand = isinstance(user, BrandUser)
+    brand = user.brand if is_brand else None
     
     if is_brand:
+        # Brand sees all messages for this product involving their brand
         messages = Message.objects.filter(
-            Q(product=product) & (Q(sender_brand=product.brand) | Q(receiver_brand=product.brand))
-        ).distinct().order_by('timestamp')
+            Q(product=product) & (Q(sender_brand=brand) | Q(receiver_brand=brand))
+        ).order_by('timestamp')
     else:
+        # Customer sees messages they sent + any brand replies on this product for them
         messages = Message.objects.filter(
-            Q(product=product) & (Q(sender_user=user) | Q(receiver_user=user))
+            Q(product=product) & (
+                Q(sender_user=user) | Q(receiver_user=user) |
+                # Also include brand messages on this product if user has sent a message
+                (Q(is_from_brand=True) & Q(product__messages__sender_user=user))
+            )
         ).distinct().order_by('timestamp')
 
     serializer = MessageSerializer(messages, many=True)
@@ -738,6 +745,10 @@ def send_message_view(request):
     message_text = data.get('message')
     if not product_id or not message_text:
         return Response({'detail': 'product and message are required'}, status=400)
+    try:
+        product_id = int(product_id)
+    except (ValueError, TypeError):
+        return Response({'detail': 'Invalid product id'}, status=400)
     product = Product.objects.filter(id=product_id).first()
     if not product:
         return Response({'detail': 'Product not found'}, status=404)
@@ -745,7 +756,7 @@ def send_message_view(request):
     is_brand = isinstance(user, BrandUser)
     msg = Message(product=product, message=message_text)
     if is_brand:
-        msg.sender_brand = product.brand
+        msg.sender_brand = user.brand
         # Find the user who started this conversation
         first_msg = Message.objects.filter(
             product=product, is_from_brand=False
@@ -764,7 +775,7 @@ def send_message_view(request):
 @permission_classes([IsAuthenticated])
 def conversations_list_view(request):
     """Get all conversations for the current user/brand, grouped by product."""
-    from django.db.models import Q, Max, Count
+    from django.db.models import Q
     from collections import OrderedDict
 
     user = request.user
@@ -774,13 +785,25 @@ def conversations_list_view(request):
         brand = user.brand
         msgs = Message.objects.filter(
             Q(sender_brand=brand) | Q(receiver_brand=brand)
-        ).select_related('product', 'sender_user', 'sender_brand', 'receiver_user', 'receiver_brand'
+        ).select_related('product', 'product__brand', 'sender_user', 'sender_brand', 'receiver_user', 'receiver_brand'
         ).order_by('-timestamp')
     else:
         msgs = Message.objects.filter(
             Q(sender_user=user) | Q(receiver_user=user)
-        ).select_related('product', 'sender_user', 'sender_brand', 'receiver_user', 'receiver_brand'
+        ).select_related('product', 'product__brand', 'sender_user', 'sender_brand', 'receiver_user', 'receiver_brand'
         ).order_by('-timestamp')
+
+        # Also include brand replies on products where user has sent a message
+        user_product_ids = Message.objects.filter(sender_user=user).values_list('product_id', flat=True).distinct()
+        brand_replies = Message.objects.filter(
+            product_id__in=user_product_ids, is_from_brand=True
+        ).select_related('product', 'product__brand', 'sender_user', 'sender_brand', 'receiver_user', 'receiver_brand'
+        ).order_by('-timestamp')
+
+        # Merge: use a dict to avoid duplicates
+        msgs_list = list(msgs) + [m for m in brand_replies if m.id not in {x.id for x in msgs}]
+        msgs_list.sort(key=lambda m: m.timestamp, reverse=True)
+        msgs = msgs_list
 
     # Group by product
     seen_products = OrderedDict()
@@ -790,16 +813,26 @@ def conversations_list_view(request):
             product = msg.product
             # Determine the other party name
             if is_brand:
-                other_name = msg.sender_user.username if msg.sender_user else (msg.receiver_user.username if msg.receiver_user else 'Customer')
+                # Find the customer name from any message in this conversation
+                other_name = None
+                if msg.sender_user:
+                    other_name = msg.sender_user.username
+                elif msg.receiver_user:
+                    other_name = msg.receiver_user.username
+                if not other_name:
+                    other_name = 'Customer'
             else:
                 other_name = product.brand.username if product.brand else 'Brand'
 
             # Get product image
             product_image = None
-            first_img = product.images.first()
-            if first_img and first_img.image_data:
-                import base64
-                product_image = f"data:{first_img.image_type};base64,{base64.b64encode(first_img.image_data).decode()}"
+            try:
+                first_img = product.images.first()
+                if first_img and first_img.image_data:
+                    # image_data is already base64 encoded string in the TextField
+                    product_image = f"data:{first_img.image_type};base64,{first_img.image_data}"
+            except Exception:
+                pass
 
             seen_products[pid] = {
                 'product_id': pid,
@@ -813,7 +846,6 @@ def conversations_list_view(request):
                 'unread_count': 0,
             }
 
-    # Count unread (messages not from current user that are recent)
     conversations = list(seen_products.values())
     return Response(conversations)
 

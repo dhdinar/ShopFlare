@@ -1,5 +1,5 @@
 import { StyleSheet, View, ScrollView, TouchableOpacity, TextInput, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +23,7 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [messageText, setMessageText] = useState('');
+  const deepLinkHandled = useRef<string | null>(null);
 
   const fetchConversations = useCallback(async () => {
     if (!accessToken) {
@@ -43,9 +44,10 @@ export default function ChatScreen() {
     fetchConversations();
   }, [fetchConversations]);
 
-  // Handle deep link: open chat for a specific product
+  // Handle deep link: open chat for a specific product (only once per productId)
   useEffect(() => {
-    if (params.productId && accessToken) {
+    if (params.productId && accessToken && !loading && deepLinkHandled.current !== params.productId) {
+      deepLinkHandled.current = params.productId;
       const pid = Number(params.productId);
       // Try to find existing conversation
       const existing = conversations.find(c => c.product_id === pid);
@@ -66,10 +68,11 @@ export default function ChatScreen() {
         });
       }
     }
-  }, [params.productId, conversations, accessToken]);
+  }, [params.productId, loading, accessToken]);
 
   const openChat = async (conv: Conversation) => {
     setActiveChat(conv);
+    setMessages([]);
     setLoadingMessages(true);
     try {
       if (accessToken) {
@@ -77,6 +80,7 @@ export default function ChatScreen() {
         setMessages(data);
       }
     } catch (e) {
+      console.error('Failed to load messages:', e);
       setMessages([]);
     } finally {
       setLoadingMessages(false);
@@ -143,7 +147,7 @@ export default function ChatScreen() {
       <ThemedView style={styles.container}>
         {/* Chat Header */}
         <View style={styles.chatDetailHeader}>
-          <TouchableOpacity onPress={() => { setActiveChat(null); fetchConversations(); }} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => { setActiveChat(null); deepLinkHandled.current = null; fetchConversations(); }} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={28} color={ShopFlareColors.primary} />
           </TouchableOpacity>
           <View style={styles.chatHeaderInfo}>
