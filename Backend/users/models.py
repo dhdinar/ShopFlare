@@ -14,6 +14,7 @@ class Message(models.Model):
     message = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
     is_from_brand = models.BooleanField(default=False)
+    is_read = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'messages'

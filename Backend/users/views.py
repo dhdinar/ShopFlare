@@ -724,6 +724,11 @@ def product_messages_view(request, product_id):
         messages = Message.objects.filter(
             Q(product=product) & (Q(sender_brand=brand) | Q(receiver_brand=brand))
         ).order_by('timestamp')
+        Message.objects.filter(
+            id__in=messages.values_list('id', flat=True),
+            receiver_brand=brand,
+            is_read=False,
+        ).update(is_read=True)
     elif chat_with:
         # User-to-user chat: show messages between current user and the specified user on this product
         from .models import CustomUser
@@ -736,6 +741,11 @@ def product_messages_view(request, product_id):
                 (Q(sender_user=other_user) & Q(receiver_user=user))
             )
         ).order_by('timestamp')
+        Message.objects.filter(
+            id__in=messages.values_list('id', flat=True),
+            receiver_user=user,
+            is_read=False,
+        ).update(is_read=True)
     else:
         # Customer sees messages they sent/received on this product
         messages = Message.objects.filter(
@@ -744,6 +754,11 @@ def product_messages_view(request, product_id):
                 (Q(is_from_brand=True) & Q(product__messages__sender_user=user))
             )
         ).distinct().order_by('timestamp')
+        Message.objects.filter(
+            id__in=messages.values_list('id', flat=True),
+            receiver_user=user,
+            is_read=False,
+        ).update(is_read=True)
 
     serializer = MessageSerializer(messages, many=True)
     return Response(serializer.data)
@@ -829,41 +844,57 @@ def conversations_list_view(request):
         msgs = msgs_list
 
     # Group by product + chat partner (to separate brand chats from user-to-user chats)
+    unread_counts = {}
+
+    def get_conversation_meta(msg_item):
+        pid_local = msg_item.product_id
+        product_local = msg_item.product
+
+        if is_brand:
+            other_name_local = None
+            if msg_item.sender_user:
+                other_name_local = msg_item.sender_user.username
+            elif msg_item.receiver_user:
+                other_name_local = msg_item.receiver_user.username
+            if not other_name_local:
+                other_name_local = 'Customer'
+            chat_type_local = 'brand'
+            convo_key_local = f"{pid_local}_brand_{other_name_local}"
+        else:
+            is_user_to_user_local = (
+                msg_item.sender_brand is None and msg_item.receiver_brand is None and
+                msg_item.sender_user is not None and msg_item.receiver_user is not None
+            )
+            if is_user_to_user_local:
+                if msg_item.sender_user_id == user.id:
+                    other_name_local = msg_item.receiver_user.username
+                else:
+                    other_name_local = msg_item.sender_user.username
+                chat_type_local = 'user'
+                convo_key_local = f"{pid_local}_user_{other_name_local}"
+            else:
+                other_name_local = product_local.brand.username if product_local.brand else 'Brand'
+                chat_type_local = 'brand'
+                convo_key_local = f"{pid_local}_brand"
+
+        return convo_key_local, chat_type_local, other_name_local
+
+    for msg in msgs:
+        convo_key, _, _ = get_conversation_meta(msg)
+        is_unread_for_current_user = False
+        if is_brand:
+            is_unread_for_current_user = (msg.receiver_brand_id == brand.id and not msg.is_read)
+        else:
+            is_unread_for_current_user = (msg.receiver_user_id == user.id and not msg.is_read)
+
+        if is_unread_for_current_user:
+            unread_counts[convo_key] = unread_counts.get(convo_key, 0) + 1
+
     seen_convos = OrderedDict()
     for msg in msgs:
         pid = msg.product_id
         product = msg.product
-
-        # Determine chat type and the other party
-        if is_brand:
-            other_name = None
-            if msg.sender_user:
-                other_name = msg.sender_user.username
-            elif msg.receiver_user:
-                other_name = msg.receiver_user.username
-            if not other_name:
-                other_name = 'Customer'
-            chat_type = 'brand'
-            convo_key = f"{pid}_brand_{other_name}"
-        else:
-            # Check if it's a user-to-user message (no brand involved)
-            is_user_to_user = (
-                msg.sender_brand is None and msg.receiver_brand is None and
-                msg.sender_user is not None and msg.receiver_user is not None
-            )
-            if is_user_to_user:
-                # User-to-user chat
-                if msg.sender_user_id == user.id:
-                    other_name = msg.receiver_user.username
-                else:
-                    other_name = msg.sender_user.username
-                chat_type = 'user'
-                convo_key = f"{pid}_user_{other_name}"
-            else:
-                # Brand chat
-                other_name = product.brand.username if product.brand else 'Brand'
-                chat_type = 'brand'
-                convo_key = f"{pid}_brand"
+        convo_key, chat_type, other_name = get_conversation_meta(msg)
 
         if convo_key not in seen_convos:
             # Get product image
@@ -884,7 +915,7 @@ def conversations_list_view(request):
                 'last_message': msg.message,
                 'last_message_time': msg.timestamp.isoformat(),
                 'is_last_from_brand': msg.is_from_brand,
-                'unread_count': 0,
+                'unread_count': unread_counts.get(convo_key, 0),
                 'chat_type': chat_type,  # 'brand' or 'user'
             }
 

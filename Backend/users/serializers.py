@@ -241,7 +241,7 @@ class MessageSerializer(serializers.ModelSerializer):
         model = Message
         fields = [
             'id', 'sender_user', 'sender_brand', 'receiver_user', 'receiver_brand',
-            'product', 'message', 'timestamp', 'is_from_brand',
+            'product', 'message', 'timestamp', 'is_from_brand', 'is_read',
             'sender_username', 'receiver_username',
         ]
         read_only_fields = ['id', 'timestamp', 'sender_username', 'receiver_username']
