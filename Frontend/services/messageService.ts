@@ -23,6 +23,8 @@ export interface Conversation {
   last_message: string;
   last_message_time: string;
   is_last_from_brand: boolean;
+  is_last_from_me?: boolean;
+  last_sender_name?: string | null;
   unread_count: number;
   chat_type?: 'brand' | 'user';
 }
