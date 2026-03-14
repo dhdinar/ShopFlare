@@ -896,6 +896,11 @@ def conversations_list_view(request):
         product = msg.product
         convo_key, chat_type, other_name = get_conversation_meta(msg)
 
+        if is_brand:
+            is_last_from_me = (msg.sender_brand_id == brand.id)
+        else:
+            is_last_from_me = (msg.sender_user_id == user.id)
+
         if convo_key not in seen_convos:
             # Get product image
             product_image = None
@@ -906,6 +911,12 @@ def conversations_list_view(request):
             except Exception:
                 pass
 
+            last_sender_name = None
+            if msg.sender_brand:
+                last_sender_name = msg.sender_brand.username
+            elif msg.sender_user:
+                last_sender_name = msg.sender_user.username
+
             seen_convos[convo_key] = {
                 'product_id': pid,
                 'product_name': product.name,
@@ -915,6 +926,8 @@ def conversations_list_view(request):
                 'last_message': msg.message,
                 'last_message_time': msg.timestamp.isoformat(),
                 'is_last_from_brand': msg.is_from_brand,
+                'is_last_from_me': is_last_from_me,
+                'last_sender_name': last_sender_name,
                 'unread_count': unread_counts.get(convo_key, 0),
                 'chat_type': chat_type,  # 'brand' or 'user'
             }
