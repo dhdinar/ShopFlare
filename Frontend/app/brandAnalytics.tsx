@@ -25,7 +25,7 @@ interface StatCardProps {
 function StatCard({ icon, label, value, iconBg }: StatCardProps) {
   return (
     <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: iconBg || '#F0F0F0' }]}>
+      <View style={[styles.statIcon, { backgroundColor: iconBg || ShopFlareColors.borderLight }]}>
         <Ionicons name={icon as any} size={22} color={ShopFlareColors.primary} />
       </View>
       <ThemedText style={styles.statValue}>{value}</ThemedText>
@@ -45,7 +45,7 @@ function RatingStars({ rating }: { rating: number }) {
             key={i}
             name={filled ? 'star' : half ? 'star-half' : 'star-outline'}
             size={16}
-            color={filled || half ? '#FFC107' : '#CCC'}
+            color={filled || half ? ShopFlareColors.warning : ShopFlareColors.border}
           />
         );
       })}
@@ -87,7 +87,7 @@ export default function BrandAnalyticsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={ShopFlareColors.primary} />
+          <Ionicons name="arrow-back" size={24} color={ShopFlareColors.secondary} />
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle}>Analytics</ThemedText>
         <TouchableOpacity
@@ -96,7 +96,7 @@ export default function BrandAnalyticsScreen() {
           disabled={refreshing}
         >
           {refreshing ? (
-            <ActivityIndicator size="small" color={ShopFlareColors.primary} />
+            <ActivityIndicator size="small" color={ShopFlareColors.secondary} />
           ) : (
             <Ionicons name="refresh-outline" size={22} color={ShopFlareColors.primary} />
           )}
@@ -111,10 +111,10 @@ export default function BrandAnalyticsScreen() {
           {/* Overview grid */}
           <ThemedText style={styles.sectionLabel}>Overview</ThemedText>
           <View style={styles.statsGrid}>
-            <StatCard icon="cube-outline" label="Total Products" value={data.total_products} iconBg="#E8F4FD" />
-            <StatCard icon="checkmark-circle-outline" label="Active" value={data.active_products} iconBg="#E8FDE8" />
-            <StatCard icon="heart-outline" label="Wishlist Saves" value={data.wishlist_saves} iconBg="#FDE8E8" />
-            <StatCard icon="cart-outline" label="Cart Adds" value={data.cart_adds} iconBg="#FDF5E8" />
+            <StatCard icon="cube-outline" label="Total Products" value={data.total_products} iconBg={ShopFlareColors.infoLight} />
+            <StatCard icon="checkmark-circle-outline" label="Active" value={data.active_products} iconBg={ShopFlareColors.successLight} />
+            <StatCard icon="heart-outline" label="Wishlist Saves" value={data.wishlist_saves} iconBg={ShopFlareColors.errorLight} />
+            <StatCard icon="cart-outline" label="Cart Adds" value={data.cart_adds} iconBg={ShopFlareColors.warningLight} />
           </View>
 
           {/* Reviews summary */}
@@ -153,7 +153,7 @@ export default function BrandAnalyticsScreen() {
                       <ThemedText style={styles.productPrice}>${product.price}</ThemedText>
                     </View>
                     <View style={styles.savesCount}>
-                      <Ionicons name="heart" size={14} color="#F44336" />
+                      <Ionicons name="heart" size={14} color={ShopFlareColors.error} />
                       <ThemedText style={styles.savesText}>{product.saves}</ThemedText>
                     </View>
                   </View>
@@ -165,7 +165,7 @@ export default function BrandAnalyticsScreen() {
           {/* Empty products hint */}
           {data.total_products === 0 && (
             <View style={styles.emptyHint}>
-              <Ionicons name="information-circle-outline" size={20} color="#888" />
+              <Ionicons name="information-circle-outline" size={20} color={ShopFlareColors.warning} />
               <ThemedText style={styles.emptyHintText}>
                 Add products to start tracking analytics
               </ThemedText>
@@ -179,26 +179,24 @@ export default function BrandAnalyticsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: ShopFlareColors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 56,
-    paddingBottom: 16,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: ShopFlareColors.primary,
   },
   backButton: { padding: 8 },
   refreshButton: { padding: 8 },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: ShopFlareColors.secondary },
   content: { padding: 16, paddingBottom: 60 },
   sectionLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#888',
+    color: ShopFlareColors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 10,
@@ -213,12 +211,12 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: '44%',
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 14,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#EEE',
+    borderColor: ShopFlareColors.borderLight,
   },
   statIcon: {
     width: 46,
@@ -229,26 +227,26 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statValue: { fontSize: 28, fontWeight: '800', color: ShopFlareColors.primary },
-  statLabel: { fontSize: 12, color: '#888', marginTop: 2, textAlign: 'center' },
+  statLabel: { fontSize: 12, color: ShopFlareColors.textSecondary, marginTop: 2, textAlign: 'center' },
   reviewCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 14,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#EEE',
+    borderColor: ShopFlareColors.borderLight,
   },
   reviewTop: { flexDirection: 'row', alignItems: 'center', gap: 20 },
   ratingBig: { flexDirection: 'row', alignItems: 'baseline' },
   ratingNumber: { fontSize: 48, fontWeight: '800', color: ShopFlareColors.primary },
-  ratingOutOf: { fontSize: 20, color: '#999', marginLeft: 2 },
+  ratingOutOf: { fontSize: 20, color: ShopFlareColors.textSecondary, marginLeft: 2 },
   ratingDetails: { gap: 6 },
-  totalReviews: { fontSize: 13, color: '#888' },
+  totalReviews: { fontSize: 13, color: ShopFlareColors.textSecondary },
   topProductsList: {
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#EEE',
+    borderColor: ShopFlareColors.borderLight,
   },
   topProductRow: {
     flexDirection: 'row',
@@ -256,7 +254,7 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: ShopFlareColors.borderLight,
   },
   rankBadge: {
     width: 30,
@@ -266,20 +264,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rankText: { fontSize: 12, fontWeight: '800', color: '#FFF' },
+  rankText: { fontSize: 12, fontWeight: '800', color: ShopFlareColors.secondary },
   productInfo: { flex: 1 },
   productName: { fontSize: 14, fontWeight: '600' },
-  productPrice: { fontSize: 13, color: '#666', marginTop: 2 },
+  productPrice: { fontSize: 13, color: ShopFlareColors.textSecondary, marginTop: 2 },
   savesCount: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  savesText: { fontSize: 14, fontWeight: '700', color: '#F44336' },
+  savesText: { fontSize: 14, fontWeight: '700', color: ShopFlareColors.error },
   emptyHint: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FFF8F0',
+    backgroundColor: ShopFlareColors.warningLight,
     borderRadius: 10,
     padding: 14,
     marginTop: 8,
   },
-  emptyHintText: { fontSize: 13, color: '#888', flex: 1 },
+  emptyHintText: { fontSize: 13, color: ShopFlareColors.textSecondary, flex: 1 },
 });

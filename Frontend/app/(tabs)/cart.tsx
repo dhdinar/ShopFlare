@@ -72,7 +72,7 @@ export default function CartScreen() {
         </View>
       ) : cart.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="bag-outline" size={80} color="#DDD" />
+          <Ionicons name="bag-outline" size={80} color={ShopFlareColors.border} />
           <ThemedText style={styles.emptyTitle}>Your cart is empty</ThemedText>
           <ThemedText style={styles.emptySubtitle}>Add items to your cart to see them here</ThemedText>
           <TouchableOpacity style={styles.shopButton} onPress={() => router.push('/(tabs)')}>
@@ -111,7 +111,7 @@ export default function CartScreen() {
                         removeFromCart(item.id);
                       }}
                     >
-                      <Ionicons name="trash-outline" size={18} color="#999" />
+                      <Ionicons name="trash-outline" size={18} color={ShopFlareColors.error} />
                     </TouchableOpacity>
                     <View style={styles.quantityContainer}>
                       <TouchableOpacity 
@@ -121,7 +121,7 @@ export default function CartScreen() {
                           handleUpdateQuantity(item.id, -1, item.quantity);
                         }}
                       >
-                        <Ionicons name="remove" size={16} color="#666" />
+                        <Ionicons name="remove" size={16} color={ShopFlareColors.textSecondary} />
                       </TouchableOpacity>
                       <ThemedText style={styles.quantity}>{item.quantity}</ThemedText>
                       <TouchableOpacity 
@@ -131,7 +131,7 @@ export default function CartScreen() {
                           handleUpdateQuantity(item.id, 1, item.quantity);
                         }}
                       >
-                        <Ionicons name="add" size={16} color="#FFF" />
+                        <Ionicons name="add" size={16} color={ShopFlareColors.secondary} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -142,7 +142,7 @@ export default function CartScreen() {
             {/* Promo Code */}
             <View style={styles.promoContainer}>
               <View style={styles.promoInput}>
-                <Ionicons name="pricetag-outline" size={20} color="#999" />
+                <Ionicons name="pricetag-outline" size={20} color={ShopFlareColors.textSecondary} />
                 <ThemedText style={styles.promoPlaceholder}>Enter promo code</ThemedText>
               </View>
               <TouchableOpacity style={styles.applyButton}>
@@ -172,7 +172,7 @@ export default function CartScreen() {
             </View>
             <TouchableOpacity style={styles.checkoutButton} onPress={() => router.push('/checkout')}>
               <ThemedText style={styles.checkoutButtonText}>Proceed to Checkout</ThemedText>
-              <Ionicons name="arrow-forward" size={20} color="#FFF" />
+              <Ionicons name="arrow-forward" size={20} color={ShopFlareColors.primary} />
             </TouchableOpacity>
           </View>
         </>
@@ -184,7 +184,7 @@ export default function CartScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: ShopFlareColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -198,11 +198,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: ShopFlareColors.secondary,
   },
   itemCount: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: ShopFlareColors.secondary,
     opacity: 0.9,
   },
   loadingContainer: {
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     fontSize: 14,
   },
   emptyContainer: {
@@ -224,12 +224,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
     marginTop: 20,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#999',
+    color: ShopFlareColors.textLight,
     textAlign: 'center',
     marginTop: 8,
   },
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   shopButtonText: {
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
     fontWeight: '600',
     fontSize: 16,
   },
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   },
   cartCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 16,
     padding: 12,
     marginBottom: 12,
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 12,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: ShopFlareColors.background,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -289,11 +289,11 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
   },
   productVariant: {
     fontSize: 12,
-    color: '#999',
+    color: ShopFlareColors.textLight,
     marginTop: 2,
   },
   price: {
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: ShopFlareColors.background,
     borderRadius: 8,
   },
   quantityBtn: {
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   },
   promoContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 12,
     padding: 4,
     marginTop: 8,
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   promoPlaceholder: {
-    color: '#999',
+    color: ShopFlareColors.textLight,
     marginLeft: 8,
   },
   applyButton: {
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   applyButtonText: {
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
     fontWeight: '600',
   },
   summaryContainer: {
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
@@ -376,22 +376,22 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#999',
+    color: ShopFlareColors.textLight,
   },
   summaryValue: {
     fontSize: 14,
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
     fontWeight: '500',
   },
   divider: {
     height: 1,
-    backgroundColor: '#EEE',
+    backgroundColor: ShopFlareColors.borderLight,
     marginVertical: 12,
   },
   totalLabel: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
   },
   totalValue: {
     fontSize: 20,
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   checkoutButtonText: {
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
     fontSize: 16,
     fontWeight: '600',
   },

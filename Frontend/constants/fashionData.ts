@@ -1,10 +1,12 @@
+import { ShopFlareColors } from '@/constants/theme';
+
 export const COLORS = {
-  primary: '#FF6B00', // Orange
-  white: '#FFFFFF',
-  black: '#000000',
-  gray: '#F5F5F5',
-  lightGray: '#E8E8E8',
-  darkGray: '#666666',
+  primary: ShopFlareColors.accent,
+  white: ShopFlareColors.secondary,
+  black: ShopFlareColors.primary,
+  gray: ShopFlareColors.background,
+  lightGray: ShopFlareColors.border,
+  darkGray: ShopFlareColors.textSecondary,
 };
 
 // Main fashion categories

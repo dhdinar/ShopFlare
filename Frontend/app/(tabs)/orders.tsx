@@ -46,27 +46,27 @@ export default function OrdersScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return '#FFA726';
-      case 'confirmed': return '#42A5F5';
-      case 'processing': return '#AB47BC';
-      case 'shipped': return '#7E57C2';
-      case 'delivered': return '#66BB6A';
-      case 'cancelled': return '#EF5350';
-      case 'refunded': return '#78909C';
-      default: return '#999';
+      case 'pending': return ShopFlareColors.statusPending;
+      case 'confirmed': return ShopFlareColors.statusConfirmed;
+      case 'processing': return ShopFlareColors.statusProcessing;
+      case 'shipped': return ShopFlareColors.statusShipped;
+      case 'delivered': return ShopFlareColors.statusDelivered;
+      case 'cancelled': return ShopFlareColors.statusCancelled;
+      case 'refunded': return ShopFlareColors.statusRefunded;
+      default: return ShopFlareColors.textLight;
     }
   };
 
   const getStatusBgColor = (status: string) => {
     switch (status) {
-      case 'pending': return '#FFF3E0';
-      case 'confirmed': return '#E3F2FD';
-      case 'processing': return '#F3E5F5';
-      case 'shipped': return '#EDE7F6';
-      case 'delivered': return '#E8F5E9';
-      case 'cancelled': return '#FFEBEE';
-      case 'refunded': return '#ECEFF1';
-      default: return '#F5F5F5';
+      case 'pending': return ShopFlareColors.statusPendingLight;
+      case 'confirmed': return ShopFlareColors.statusConfirmedLight;
+      case 'processing': return ShopFlareColors.statusProcessingLight;
+      case 'shipped': return ShopFlareColors.statusShippedLight;
+      case 'delivered': return ShopFlareColors.statusDeliveredLight;
+      case 'cancelled': return ShopFlareColors.statusCancelledLight;
+      case 'refunded': return ShopFlareColors.statusRefundedLight;
+      default: return ShopFlareColors.background;
     }
   };
 
@@ -143,16 +143,16 @@ export default function OrdersScreen() {
         <View style={styles.orderInfo}>
           {isBrand && (
             <View style={styles.orderRow}>
-              <Ionicons name="person-outline" size={16} color="#666" />
+              <Ionicons name="person-outline" size={16} color={ShopFlareColors.textSecondary} />
               <ThemedText style={styles.orderRowText}>{item.username}</ThemedText>
             </View>
           )}
           <View style={styles.orderRow}>
-            <Ionicons name="cube-outline" size={16} color="#666" />
+            <Ionicons name="cube-outline" size={16} color={ShopFlareColors.textSecondary} />
             <ThemedText style={styles.orderRowText} numberOfLines={2}>{itemSummary}</ThemedText>
           </View>
           <View style={styles.orderRow}>
-            <Ionicons name="calendar-outline" size={16} color="#666" />
+            <Ionicons name="calendar-outline" size={16} color={ShopFlareColors.textSecondary} />
             <ThemedText style={styles.orderRowText}>
               {new Date(item.created_at).toLocaleDateString()}
             </ThemedText>
@@ -180,7 +180,7 @@ export default function OrdersScreen() {
                 </ThemedText>
               </TouchableOpacity>
             )}
-            <Ionicons name="chevron-forward" size={20} color="#999" />
+            <Ionicons name="chevron-forward" size={20} color={ShopFlareColors.textLight} />
           </View>
         </View>
       </TouchableOpacity>
@@ -192,7 +192,7 @@ export default function OrdersScreen() {
     return (
       <ThemedView style={styles.container}>
         <View style={styles.emptyContainer}>
-          <Ionicons name="log-in-outline" size={64} color="#CCC" />
+          <Ionicons name="log-in-outline" size={64} color={ShopFlareColors.border} />
           <ThemedText style={styles.emptyTitle}>Sign in</ThemedText>
           <ThemedText style={styles.emptyMessage}>Sign in to view your orders</ThemedText>
         </View>
@@ -208,15 +208,15 @@ export default function OrdersScreen() {
           {isBrand ? 'Customer Orders' : 'My Orders'}
         </ThemedText>
         <TouchableOpacity style={styles.refreshButton} onPress={fetchOrders}>
-          <Ionicons name="refresh" size={22} color="#000" />
+          <Ionicons name="refresh" size={22} color={ShopFlareColors.primary} />
         </TouchableOpacity>
       </View>
 
       {/* Stats */}
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
-          <View style={[styles.statIcon, { backgroundColor: '#FFF3E0' }]}>
-            <Ionicons name="time-outline" size={20} color="#FFA726" />
+          <View style={[styles.statIcon, { backgroundColor: ShopFlareColors.statusPendingLight }]}>
+            <Ionicons name="time-outline" size={20} color={ShopFlareColors.statusPending} />
           </View>
           <ThemedText style={styles.statNumber}>
             {orders.filter(o => o.status === 'pending').length}
@@ -224,8 +224,8 @@ export default function OrdersScreen() {
           <ThemedText style={styles.statLabel}>Pending</ThemedText>
         </View>
         <View style={styles.statCard}>
-          <View style={[styles.statIcon, { backgroundColor: '#E3F2FD' }]}>
-            <Ionicons name="checkmark-circle-outline" size={20} color="#42A5F5" />
+          <View style={[styles.statIcon, { backgroundColor: ShopFlareColors.statusConfirmedLight }]}>
+            <Ionicons name="checkmark-circle-outline" size={20} color={ShopFlareColors.statusConfirmed} />
           </View>
           <ThemedText style={styles.statNumber}>
             {orders.filter(o => o.status === 'confirmed').length}
@@ -233,8 +233,8 @@ export default function OrdersScreen() {
           <ThemedText style={styles.statLabel}>Confirmed</ThemedText>
         </View>
         <View style={styles.statCard}>
-          <View style={[styles.statIcon, { backgroundColor: '#EDE7F6' }]}>
-            <Ionicons name="airplane-outline" size={20} color="#7E57C2" />
+          <View style={[styles.statIcon, { backgroundColor: ShopFlareColors.statusShippedLight }]}>
+            <Ionicons name="airplane-outline" size={20} color={ShopFlareColors.statusShipped} />
           </View>
           <ThemedText style={styles.statNumber}>
             {orders.filter(o => o.status === 'shipped').length}
@@ -242,8 +242,8 @@ export default function OrdersScreen() {
           <ThemedText style={styles.statLabel}>Shipped</ThemedText>
         </View>
         <View style={styles.statCard}>
-          <View style={[styles.statIcon, { backgroundColor: '#E8F5E9' }]}>
-            <Ionicons name="checkmark-done-outline" size={20} color="#66BB6A" />
+          <View style={[styles.statIcon, { backgroundColor: ShopFlareColors.statusDeliveredLight }]}>
+            <Ionicons name="checkmark-done-outline" size={20} color={ShopFlareColors.statusDelivered} />
           </View>
           <ThemedText style={styles.statNumber}>
             {orders.filter(o => o.status === 'delivered').length}
@@ -286,7 +286,7 @@ export default function OrdersScreen() {
         <ActivityIndicator size="large" color={ShopFlareColors.primary} style={{ marginTop: 40 }} />
       ) : filteredOrders.length === 0 ? (
         <View style={styles.emptyOrders}>
-          <Ionicons name="receipt-outline" size={64} color="#CCC" />
+          <Ionicons name="receipt-outline" size={64} color={ShopFlareColors.border} />
           <ThemedText style={styles.emptyOrdersText}>No orders yet</ThemedText>
           <ThemedText style={styles.emptyOrdersSubtext}>
             {isBrand
@@ -310,7 +310,7 @@ export default function OrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: ShopFlareColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -318,20 +318,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 16,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
+    paddingBottom: 20,
+    backgroundColor: ShopFlareColors.primary,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
+    color: ShopFlareColors.secondary,
   },
   refreshButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -342,7 +341,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     padding: 12,
     borderRadius: 12,
     alignItems: 'center',
@@ -366,14 +365,14 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 10,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     marginTop: 2,
   },
   filterContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
+    borderBottomColor: ShopFlareColors.borderLight,
   },
   filterList: {
     paddingHorizontal: 16,
@@ -383,7 +382,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: ShopFlareColors.borderLight,
     marginRight: 8,
   },
   filterButtonActive: {
@@ -391,18 +390,18 @@ const styles = StyleSheet.create({
   },
   filterText: {
     fontSize: 14,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     fontWeight: '500',
   },
   filterTextActive: {
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
   },
   orderList: {
     padding: 16,
     paddingBottom: 100,
   },
   orderCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -435,7 +434,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: ShopFlareColors.borderLight,
   },
   orderRow: {
     flexDirection: 'row',
@@ -444,7 +443,7 @@ const styles = StyleSheet.create({
   },
   orderRowText: {
     fontSize: 14,
-    color: '#333',
+    color: ShopFlareColors.text,
   },
   orderFooter: {
     flexDirection: 'row',
@@ -470,7 +469,7 @@ const styles = StyleSheet.create({
   },
   emptyMessage: {
     fontSize: 16,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     textAlign: 'center',
   },
   emptyOrders: {
@@ -487,12 +486,12 @@ const styles = StyleSheet.create({
   },
   emptyOrdersSubtext: {
     fontSize: 14,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     textAlign: 'center',
   },
   cancelBtn: {
     borderWidth: 1,
-    borderColor: '#EF5350',
+    borderColor: ShopFlareColors.statusCancelled,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -500,7 +499,7 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#EF5350',
+    color: ShopFlareColors.statusCancelled,
   },
   nextStatusBtn: {
     backgroundColor: ShopFlareColors.accent,
@@ -511,6 +510,6 @@ const styles = StyleSheet.create({
   nextStatusBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
   },
 });

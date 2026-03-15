@@ -56,18 +56,28 @@ export default function OrderDetailScreen() {
 
   const getStatusColor = (status: string) => {
     const map: Record<string, string> = {
-      pending: '#FFA726', confirmed: '#42A5F5', processing: '#AB47BC',
-      shipped: '#7E57C2', delivered: '#66BB6A', cancelled: '#EF5350', refunded: '#78909C',
+      pending: ShopFlareColors.statusPending,
+      confirmed: ShopFlareColors.statusConfirmed,
+      processing: ShopFlareColors.statusProcessing,
+      shipped: ShopFlareColors.statusShipped,
+      delivered: ShopFlareColors.statusDelivered,
+      cancelled: ShopFlareColors.statusCancelled,
+      refunded: ShopFlareColors.statusRefunded,
     };
-    return map[status] || '#999';
+    return map[status] || ShopFlareColors.textLight;
   };
 
   const getStatusBgColor = (status: string) => {
     const map: Record<string, string> = {
-      pending: '#FFF3E0', confirmed: '#E3F2FD', processing: '#F3E5F5',
-      shipped: '#EDE7F6', delivered: '#E8F5E9', cancelled: '#FFEBEE', refunded: '#ECEFF1',
+      pending: ShopFlareColors.statusPendingLight,
+      confirmed: ShopFlareColors.statusConfirmedLight,
+      processing: ShopFlareColors.statusProcessingLight,
+      shipped: ShopFlareColors.statusShippedLight,
+      delivered: ShopFlareColors.statusDeliveredLight,
+      cancelled: ShopFlareColors.statusCancelledLight,
+      refunded: ShopFlareColors.statusRefundedLight,
     };
-    return map[status] || '#F5F5F5';
+    return map[status] || ShopFlareColors.background;
   };
 
   const STATUS_STEPS = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
@@ -77,7 +87,7 @@ export default function OrderDetailScreen() {
       <ThemedView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#FFF" />
+            <Ionicons name="arrow-back" size={24} color={ShopFlareColors.secondary} />
           </TouchableOpacity>
           <ThemedText style={styles.headerTitle}>Order Details</ThemedText>
           <View style={{ width: 40 }} />
@@ -94,14 +104,14 @@ export default function OrderDetailScreen() {
       <ThemedView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#FFF" />
+            <Ionicons name="arrow-back" size={24} color={ShopFlareColors.secondary} />
           </TouchableOpacity>
           <ThemedText style={styles.headerTitle}>Order Details</ThemedText>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.centered}>
-          <Ionicons name="alert-circle-outline" size={48} color="#CCC" />
-          <ThemedText style={{ color: '#999', marginTop: 12 }}>Order not found</ThemedText>
+          <Ionicons name="alert-circle-outline" size={48} color={ShopFlareColors.border} />
+          <ThemedText style={{ color: ShopFlareColors.textLight, marginTop: 12 }}>Order not found</ThemedText>
         </View>
       </ThemedView>
     );
@@ -116,7 +126,7 @@ export default function OrderDetailScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#FFF" />
+          <Ionicons name="arrow-back" size={24} color={ShopFlareColors.secondary} />
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle}>Order #{order.id}</ThemedText>
         <View style={{ width: 40 }} />
@@ -206,7 +216,7 @@ export default function OrderDetailScreen() {
             </View>
             <View style={styles.infoRow}>
               <ThemedText style={styles.infoLabel}>Shipping</ThemedText>
-              <ThemedText style={[styles.infoValue, Number(order.shipping_cost) === 0 && { color: '#66BB6A' }]}>
+              <ThemedText style={[styles.infoValue, Number(order.shipping_cost) === 0 && { color: ShopFlareColors.success }]}> 
                 {Number(order.shipping_cost) === 0 ? 'FREE' : `$${Number(order.shipping_cost).toFixed(2)}`}
               </ThemedText>
             </View>
@@ -244,7 +254,7 @@ export default function OrderDetailScreen() {
           <View style={styles.section}>
             <ThemedText style={styles.sectionTitle}>Notes</ThemedText>
             <View style={styles.infoCard}>
-              <ThemedText style={{ color: '#555', lineHeight: 20 }}>{order.notes}</ThemedText>
+              <ThemedText style={{ color: ShopFlareColors.textSecondary, lineHeight: 20 }}>{order.notes}</ThemedText>
             </View>
           </View>
         ) : null}
@@ -252,7 +262,7 @@ export default function OrderDetailScreen() {
         {/* Cancel Button */}
         {canCancel && (
           <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-            <Ionicons name="close-circle-outline" size={20} color="#EF5350" />
+            <Ionicons name="close-circle-outline" size={20} color={ShopFlareColors.statusCancelled} />
             <ThemedText style={styles.cancelButtonText}>Cancel Order</ThemedText>
           </TouchableOpacity>
         )}
@@ -264,14 +274,14 @@ export default function OrderDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: ShopFlareColors.background },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingTop: 60, paddingHorizontal: 20, paddingBottom: 18,
+    paddingTop: 60, paddingHorizontal: 20, paddingBottom: 20,
     backgroundColor: ShopFlareColors.primary,
   },
   backButton: { width: 40, height: 40, justifyContent: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFF' },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: ShopFlareColors.secondary },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { flex: 1, padding: 16 },
 
@@ -280,53 +290,53 @@ const styles = StyleSheet.create({
     padding: 16, marginBottom: 20,
   },
   statusTitle: { fontSize: 18, fontWeight: '700' },
-  statusDate: { fontSize: 13, color: '#666', marginTop: 2 },
+  statusDate: { fontSize: 13, color: ShopFlareColors.textSecondary, marginTop: 2 },
 
   section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 10 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: ShopFlareColors.text, marginBottom: 10 },
 
   // Progress
   progressRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 },
   progressStep: { alignItems: 'center', flex: 1 },
-  progressDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#DDD' },
+  progressDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: ShopFlareColors.borderLight },
   progressDotActive: { backgroundColor: ShopFlareColors.primary },
   progressLine: {
     position: 'absolute', top: 6, left: '55%', right: '-45%', height: 2,
-    backgroundColor: '#DDD', zIndex: -1,
+    backgroundColor: ShopFlareColors.borderLight, zIndex: -1,
   },
   progressLineActive: { backgroundColor: ShopFlareColors.primary },
-  progressLabel: { fontSize: 10, color: '#AAA', marginTop: 6, textAlign: 'center' },
+  progressLabel: { fontSize: 10, color: ShopFlareColors.textLight, marginTop: 6, textAlign: 'center' },
   progressLabelActive: { color: ShopFlareColors.primary, fontWeight: '600' },
 
   // Items
   itemCard: {
-    flexDirection: 'row', backgroundColor: '#FFF', borderRadius: 12,
+    flexDirection: 'row', backgroundColor: ShopFlareColors.secondary, borderRadius: 12,
     padding: 14, marginBottom: 8, alignItems: 'center',
   },
-  itemName: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
-  itemMeta: { fontSize: 12, color: '#999', marginTop: 2 },
-  itemQty: { fontSize: 12, color: '#666', marginTop: 4 },
+  itemName: { fontSize: 14, fontWeight: '600', color: ShopFlareColors.text },
+  itemMeta: { fontSize: 12, color: ShopFlareColors.textLight, marginTop: 2 },
+  itemQty: { fontSize: 12, color: ShopFlareColors.textSecondary, marginTop: 4 },
   itemPrice: { fontSize: 15, fontWeight: '700', color: ShopFlareColors.primary },
 
   // Info card
-  infoCard: { backgroundColor: '#FFF', borderRadius: 14, padding: 16 },
+  infoCard: { backgroundColor: ShopFlareColors.secondary, borderRadius: 14, padding: 16 },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  infoLabel: { fontSize: 14, color: '#999' },
-  infoValue: { fontSize: 14, fontWeight: '500', color: '#333' },
-  divider: { height: 1, backgroundColor: '#EEE', marginVertical: 10 },
-  totalLabel: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A' },
+  infoLabel: { fontSize: 14, color: ShopFlareColors.textLight },
+  infoValue: { fontSize: 14, fontWeight: '500', color: ShopFlareColors.text },
+  divider: { height: 1, backgroundColor: ShopFlareColors.borderLight, marginVertical: 10 },
+  totalLabel: { fontSize: 16, fontWeight: 'bold', color: ShopFlareColors.text },
   totalValue: { fontSize: 18, fontWeight: 'bold', color: ShopFlareColors.primary },
 
   // Address
-  addrName: { fontWeight: '700', fontSize: 15, color: '#1A1A1A', marginBottom: 4 },
-  addrLine: { fontSize: 13, color: '#666', lineHeight: 20 },
-  addrPhone: { fontSize: 13, color: '#888', marginTop: 6 },
+  addrName: { fontWeight: '700', fontSize: 15, color: ShopFlareColors.text, marginBottom: 4 },
+  addrLine: { fontSize: 13, color: ShopFlareColors.textSecondary, lineHeight: 20 },
+  addrPhone: { fontSize: 13, color: ShopFlareColors.textLight, marginTop: 6 },
 
   // Cancel
   cancelButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: '#EF5350', borderRadius: 14,
+    borderWidth: 1.5, borderColor: ShopFlareColors.statusCancelled, borderRadius: 14,
     paddingVertical: 14, gap: 8, marginTop: 4,
   },
-  cancelButtonText: { fontSize: 15, fontWeight: '600', color: '#EF5350' },
+  cancelButtonText: { fontSize: 15, fontWeight: '600', color: ShopFlareColors.statusCancelled },
 });

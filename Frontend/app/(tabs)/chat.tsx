@@ -331,7 +331,7 @@ export default function ChatScreen() {
           {/* Chat Header */}
           <View style={styles.chatDetailHeader}>
             <TouchableOpacity onPress={() => { setActiveChat(null); deepLinkHandled.current = null; fetchConversations(); }} style={styles.backBtn}>
-              <Ionicons name="chevron-back" size={28} color={ShopFlareColors.primary} />
+              <Ionicons name="chevron-back" size={28} color={ShopFlareColors.secondary} />
             </TouchableOpacity>
             <View style={styles.chatHeaderInfo}>
               <ThemedText style={styles.chatHeaderName} numberOfLines={1}>
@@ -355,7 +355,7 @@ export default function ChatScreen() {
             </View>
           ) : messages.length === 0 ? (
             <View style={styles.emptyMessages}>
-              <Ionicons name="chatbubble-ellipses-outline" size={60} color="#DDD" />
+              <Ionicons name="chatbubble-ellipses-outline" size={60} color={ShopFlareColors.border} />
               <ThemedText style={styles.emptyText}>No messages yet</ThemedText>
               <ThemedText style={styles.emptySubText}>Start the conversation!</ThemedText>
             </View>
@@ -387,7 +387,7 @@ export default function ChatScreen() {
             <TextInput
               style={styles.chatInput}
               placeholder="Type a message..."
-              placeholderTextColor="#999"
+              placeholderTextColor={ShopFlareColors.textLight}
               value={messageText}
               onChangeText={setMessageText}
               onFocus={() => scrollMessagesToBottom(false, Platform.OS === 'ios' ? 40 : 20)}
@@ -400,7 +400,7 @@ export default function ChatScreen() {
               onPress={handleSendMessage}
               disabled={!messageText.trim()}
             >
-              <Ionicons name="send" size={20} color="#FFF" />
+              <Ionicons name="send" size={20} color={ShopFlareColors.secondary} />
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -416,7 +416,7 @@ export default function ChatScreen() {
           <ThemedText style={styles.headerTitle}>Messages</ThemedText>
         </View>
         <View style={styles.emptyContainer}>
-          <Ionicons name="chatbubbles-outline" size={60} color="#DDD" />
+          <Ionicons name="chatbubbles-outline" size={60} color={ShopFlareColors.border} />
           <ThemedText style={styles.emptyText}>Login to view messages</ThemedText>
           <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/login')}>
             <ThemedText style={styles.loginButtonText}>Login</ThemedText>
@@ -435,11 +435,11 @@ export default function ChatScreen() {
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search-outline" size={20} color="#999" />
+        <Ionicons name="search-outline" size={20} color={ShopFlareColors.textLight} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search messages..."
-          placeholderTextColor="#999"
+          placeholderTextColor={ShopFlareColors.textLight}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -454,7 +454,7 @@ export default function ChatScreen() {
         </View>
       ) : filteredConversations.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="chatbubbles-outline" size={60} color="#DDD" />
+          <Ionicons name="chatbubbles-outline" size={60} color={ShopFlareColors.border} />
           <ThemedText style={styles.emptyText}>No conversations yet</ThemedText>
           <ThemedText style={styles.emptySubText}>Ask a question on any product to start chatting!</ThemedText>
         </View>
@@ -509,7 +509,7 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: ShopFlareColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -518,21 +518,21 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.primary,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1A1A1A',
+    color: ShopFlareColors.secondary,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     marginHorizontal: 20,
     marginTop: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -544,12 +544,12 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 10,
     fontSize: 16,
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
     paddingHorizontal: 20,
     marginTop: 20,
     marginBottom: 12,
@@ -566,13 +566,13 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    color: ShopFlareColors.textLight,
     marginTop: 12,
     fontWeight: '600',
   },
   emptySubText: {
     fontSize: 14,
-    color: '#BBB',
+    color: ShopFlareColors.textLight,
     marginTop: 4,
     textAlign: 'center',
     paddingHorizontal: 40,
@@ -585,14 +585,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   loginButtonText: {
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
     fontWeight: '600',
     fontSize: 16,
   },
   conversationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     marginHorizontal: 20,
     marginBottom: 6,
     paddingHorizontal: 12,
@@ -611,13 +611,13 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: ShopFlareColors.background,
   },
   avatarPlaceholder: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: ShopFlareColors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -632,6 +632,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+ 
   },
   titleRow: {
     flex: 1,
@@ -642,7 +643,7 @@ const styles = StyleSheet.create({
   conversationName: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
     flexShrink: 1,
   },
   productInline: {
@@ -652,7 +653,7 @@ const styles = StyleSheet.create({
   },
   conversationTime: {
     fontSize: 11,
-    color: '#999',
+    color: ShopFlareColors.textLight,
   },
   conversationFooter: {
     flexDirection: 'row',
@@ -662,13 +663,13 @@ const styles = StyleSheet.create({
   },
   lastMessage: {
     fontSize: 13,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     flex: 1,
     marginRight: 6,
   },
   lastMessageUnread: {
     fontWeight: '700',
-    color: '#303030',
+    color: ShopFlareColors.text,
   },
   unreadBadge: {
     backgroundColor: ShopFlareColors.accent,
@@ -679,7 +680,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   unreadText: {
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
     fontSize: 11,
     fontWeight: '600',
   },
@@ -690,34 +691,32 @@ const styles = StyleSheet.create({
   chatDetailHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 56,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingTop: 30,
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    backgroundColor: ShopFlareColors.primary,
   },
   backBtn: {
-    padding: 4,
-    marginRight: 8,
+    padding: 0,
+    marginRight: 12,
   },
   chatHeaderInfo: {
     flex: 1,
   },
   chatHeaderName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A1A',
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: ShopFlareColors.secondary,
   },
   chatHeaderProduct: {
     fontSize: 13,
-    color: '#999',
+    color: 'rgba(255,255,255,0.9)',
     marginTop: 2,
   },
   chatHeaderImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     marginLeft: 12,
   },
   emptyMessages: {
@@ -745,7 +744,7 @@ const styles = StyleSheet.create({
   },
   theirMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: '#F0F0F0',
+    backgroundColor: ShopFlareColors.borderLight,
     borderBottomLeftRadius: 4,
   },
   messageText: {
@@ -754,10 +753,10 @@ const styles = StyleSheet.create({
     paddingRight: 46,
   },
   myMessageText: {
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
   },
   theirMessageText: {
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
   },
   messageTime: {
     position: 'absolute',
@@ -767,32 +766,32 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   myMessageTime: {
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
   },
   theirMessageTime: {
-    color: '#999',
+    color: ShopFlareColors.textLight,
   },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: ShopFlareColors.borderLight,
     gap: 10,
   },
   chatInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: ShopFlareColors.border,
     borderRadius: 24,
     paddingHorizontal: 18,
     paddingVertical: 12,
     maxHeight: 100,
     fontSize: 15,
-    backgroundColor: '#F8F9FA',
-    color: '#1A1A1A',
+    backgroundColor: ShopFlareColors.background,
+    color: ShopFlareColors.text,
   },
   sendBtn: {
     width: 44,

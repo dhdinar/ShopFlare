@@ -98,7 +98,7 @@ export default function CheckoutScreen() {
       <ThemedView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#FFF" />
+            <Ionicons name="arrow-back" size={24} color={ShopFlareColors.secondary} />
           </TouchableOpacity>
           <ThemedText style={styles.headerTitle}>Checkout</ThemedText>
           <View style={{ width: 40 }} />
@@ -115,7 +115,7 @@ export default function CheckoutScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#FFF" />
+          <Ionicons name="arrow-back" size={24} color={ShopFlareColors.secondary} />
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle}>Checkout</ThemedText>
         <View style={{ width: 40 }} />
@@ -148,14 +148,14 @@ export default function CheckoutScreen() {
                   <Ionicons
                     name={selectedAddressId === addr.id ? 'radio-button-on' : 'radio-button-off'}
                     size={22}
-                    color={selectedAddressId === addr.id ? ShopFlareColors.primary : '#CCC'}
+                    color={selectedAddressId === addr.id ? ShopFlareColors.primary : ShopFlareColors.border}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={styles.addressLabelRow}>
                     <ThemedText style={styles.addressName}>{addr.full_name}</ThemedText>
-                    <View style={[styles.labelBadge, { backgroundColor: addr.label === 'home' ? '#E3F2FD' : '#FFF3E0' }]}>
-                      <ThemedText style={[styles.labelText, { color: addr.label === 'home' ? '#1976D2' : '#F57C00' }]}>
+                    <View style={[styles.labelBadge, { backgroundColor: addr.label === 'home' ? ShopFlareColors.infoLight : ShopFlareColors.warningLight }]}>
+                      <ThemedText style={[styles.labelText, { color: addr.label === 'home' ? ShopFlareColors.info : ShopFlareColors.warning }]}>
                         {addr.label.charAt(0).toUpperCase() + addr.label.slice(1)}
                       </ThemedText>
                     </View>
@@ -188,9 +188,9 @@ export default function CheckoutScreen() {
               <Ionicons
                 name={paymentMethod === pm.key ? 'radio-button-on' : 'radio-button-off'}
                 size={22}
-                color={paymentMethod === pm.key ? ShopFlareColors.primary : '#CCC'}
+                color={paymentMethod === pm.key ? ShopFlareColors.primary : ShopFlareColors.border}
               />
-              <Ionicons name={pm.icon} size={22} color="#555" style={{ marginLeft: 12 }} />
+              <Ionicons name={pm.icon} size={22} color={ShopFlareColors.textSecondary} style={{ marginLeft: 12 }} />
               <ThemedText style={styles.paymentLabel}>{pm.label}</ThemedText>
             </TouchableOpacity>
           ))}
@@ -220,7 +220,7 @@ export default function CheckoutScreen() {
             </View>
             <View style={styles.summaryRow}>
               <ThemedText style={styles.summaryLabel}>Shipping</ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: '#66BB6A' }]}>FREE</ThemedText>
+              <ThemedText style={[styles.summaryValue, { color: ShopFlareColors.success }]}>FREE</ThemedText>
             </View>
             <View style={styles.divider} />
             <View style={styles.summaryRow}>
@@ -239,7 +239,7 @@ export default function CheckoutScreen() {
           <TextInput
             style={styles.notesInput}
             placeholder="Any special instructions…"
-            placeholderTextColor="#AAA"
+            placeholderTextColor={ShopFlareColors.textLight}
             value={notes}
             onChangeText={setNotes}
             multiline
@@ -261,10 +261,10 @@ export default function CheckoutScreen() {
           disabled={isPlacing}
         >
           {isPlacing ? (
-            <ActivityIndicator color="#FFF" />
+            <ActivityIndicator color={ShopFlareColors.secondary} />
           ) : (
             <>
-              <Ionicons name="checkmark-circle" size={22} color="#FFF" />
+              <Ionicons name="checkmark-circle" size={22} color={ShopFlareColors.primary} />
               <ThemedText style={styles.placeOrderText}>Place Order</ThemedText>
             </>
           )}
@@ -275,89 +275,89 @@ export default function CheckoutScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: ShopFlareColors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 18,
+    paddingBottom: 20,
     backgroundColor: ShopFlareColors.primary,
   },
   backButton: { width: 40, height: 40, justifyContent: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFF' },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: ShopFlareColors.secondary },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { flex: 1, padding: 16 },
 
   // Section
   section: { marginBottom: 20 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: ShopFlareColors.text },
 
   // Address
   addAddressCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 14,
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#E0E0E0',
+    borderColor: ShopFlareColors.border,
     borderStyle: 'dashed',
   },
   addAddressText: { marginTop: 8, color: ShopFlareColors.primary, fontWeight: '600' },
   addressCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 14,
     padding: 14,
     marginBottom: 10,
     flexDirection: 'row',
     borderWidth: 1.5,
-    borderColor: '#EEE',
+    borderColor: ShopFlareColors.borderLight,
   },
   addressCardSelected: { borderColor: ShopFlareColors.primary },
   addressRadio: { marginRight: 12, marginTop: 2 },
   addressLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  addressName: { fontWeight: '700', fontSize: 15, color: '#1A1A1A' },
+  addressName: { fontWeight: '700', fontSize: 15, color: ShopFlareColors.text },
   labelBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   labelText: { fontSize: 11, fontWeight: '600' },
-  addressLine: { fontSize: 13, color: '#666', lineHeight: 20 },
-  addressPhone: { fontSize: 13, color: '#888', marginTop: 4 },
+  addressLine: { fontSize: 13, color: ShopFlareColors.textSecondary, lineHeight: 20 },
+  addressPhone: { fontSize: 13, color: ShopFlareColors.textLight, marginTop: 4 },
 
   // Payment
   paymentCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 12,
     padding: 14,
     marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#EEE',
+    borderColor: ShopFlareColors.borderLight,
   },
   paymentCardSelected: { borderColor: ShopFlareColors.primary },
-  paymentLabel: { marginLeft: 12, fontSize: 14, fontWeight: '500', color: '#333' },
+  paymentLabel: { marginLeft: 12, fontSize: 14, fontWeight: '500', color: ShopFlareColors.text },
 
   // Summary
-  summaryCard: { backgroundColor: '#FFF', borderRadius: 14, padding: 16 },
+  summaryCard: { backgroundColor: ShopFlareColors.secondary, borderRadius: 14, padding: 16 },
   summaryItem: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  summaryItemName: { flex: 1, fontSize: 13, color: '#555', marginRight: 8 },
-  summaryItemPrice: { fontSize: 13, fontWeight: '600', color: '#333' },
-  divider: { height: 1, backgroundColor: '#EEE', marginVertical: 10 },
+  summaryItemName: { flex: 1, fontSize: 13, color: ShopFlareColors.textSecondary, marginRight: 8 },
+  summaryItemPrice: { fontSize: 13, fontWeight: '600', color: ShopFlareColors.text },
+  divider: { height: 1, backgroundColor: ShopFlareColors.borderLight, marginVertical: 10 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  summaryLabel: { fontSize: 14, color: '#999' },
-  summaryValue: { fontSize: 14, fontWeight: '500', color: '#333' },
-  totalLabel: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A' },
+  summaryLabel: { fontSize: 14, color: ShopFlareColors.textLight },
+  summaryValue: { fontSize: 14, fontWeight: '500', color: ShopFlareColors.text },
+  totalLabel: { fontSize: 16, fontWeight: 'bold', color: ShopFlareColors.text },
   totalValue: { fontSize: 18, fontWeight: 'bold', color: ShopFlareColors.primary },
 
   // Notes
   notesInput: {
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 12,
     padding: 14,
     fontSize: 14,
-    color: '#333',
+    color: ShopFlareColors.text,
     minHeight: 80,
     textAlignVertical: 'top',
   },
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   footerContainer: {
     position: 'absolute',
     bottom: 0, left: 0, right: 0,
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
     padding: 16,
@@ -393,5 +393,5 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  placeOrderText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
+  placeOrderText: { fontSize: 16, fontWeight: '700', color: ShopFlareColors.secondary },
 });

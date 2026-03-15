@@ -103,7 +103,7 @@ export default function EditProfileScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={ShopFlareColors.primary} />
+          <Ionicons name="arrow-back" size={24} color={ShopFlareColors.secondary} />
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle}>Edit Profile</ThemedText>
         <View style={{ width: 40 }} />
@@ -114,7 +114,7 @@ export default function EditProfileScreen() {
         <View style={styles.avatarSection}>
           <View style={styles.avatar}>
             {isBrand ? (
-              <Ionicons name="storefront" size={36} color="#000" />
+              <Ionicons name="storefront" size={36} color={ShopFlareColors.primary} />
             ) : (
               <ThemedText style={styles.avatarText}>
                 {user?.username?.charAt(0).toUpperCase() || '?'}
@@ -135,7 +135,7 @@ export default function EditProfileScreen() {
                 value={firstName}
                 onChangeText={setFirstName}
                 placeholder="Enter first name"
-                placeholderTextColor="#999"
+                placeholderTextColor={ShopFlareColors.textLight}
               />
             </View>
             <View style={styles.fieldGroup}>
@@ -145,7 +145,7 @@ export default function EditProfileScreen() {
                 value={lastName}
                 onChangeText={setLastName}
                 placeholder="Enter last name"
-                placeholderTextColor="#999"
+                placeholderTextColor={ShopFlareColors.textLight}
               />
             </View>
             <View style={styles.fieldGroup}>
@@ -155,7 +155,7 @@ export default function EditProfileScreen() {
                 value={phone}
                 onChangeText={setPhone}
                 placeholder="Enter phone number"
-                placeholderTextColor="#999"
+                placeholderTextColor={ShopFlareColors.textLight}
                 keyboardType="phone-pad"
               />
             </View>
@@ -166,7 +166,7 @@ export default function EditProfileScreen() {
                 value={bio}
                 onChangeText={setBio}
                 placeholder="Tell us about yourself"
-                placeholderTextColor="#999"
+                placeholderTextColor={ShopFlareColors.textLight}
                 multiline
                 numberOfLines={3}
               />
@@ -184,7 +184,7 @@ export default function EditProfileScreen() {
                 value={phone}
                 onChangeText={setPhone}
                 placeholder="Enter phone number"
-                placeholderTextColor="#999"
+                placeholderTextColor={ShopFlareColors.textLight}
                 keyboardType="phone-pad"
               />
             </View>
@@ -195,7 +195,7 @@ export default function EditProfileScreen() {
                 value={brandDescription}
                 onChangeText={setBrandDescription}
                 placeholder="Describe your brand"
-                placeholderTextColor="#999"
+                placeholderTextColor={ShopFlareColors.textLight}
                 multiline
                 numberOfLines={3}
               />
@@ -207,7 +207,7 @@ export default function EditProfileScreen() {
                 value={brandWebsite}
                 onChangeText={setBrandWebsite}
                 placeholder="https://yourbrand.com"
-                placeholderTextColor="#999"
+                placeholderTextColor={ShopFlareColors.textLight}
                 keyboardType="url"
                 autoCapitalize="none"
               />
@@ -219,7 +219,7 @@ export default function EditProfileScreen() {
                 value={brandAddress}
                 onChangeText={setBrandAddress}
                 placeholder="Enter brand address"
-                placeholderTextColor="#999"
+                placeholderTextColor={ShopFlareColors.textLight}
                 multiline
                 numberOfLines={2}
               />
@@ -234,7 +234,7 @@ export default function EditProfileScreen() {
           disabled={savingProfile}
         >
           {savingProfile ? (
-            <ActivityIndicator color="#FFF" />
+            <ActivityIndicator color={ShopFlareColors.secondary} />
           ) : (
             <ThemedText style={styles.saveButtonText}>Save Changes</ThemedText>
           )}
@@ -250,7 +250,7 @@ export default function EditProfileScreen() {
           <Ionicons
             name={showPasswordSection ? 'chevron-up' : 'chevron-down'}
             size={20}
-            color="#999"
+            color={ShopFlareColors.primary}
           />
         </TouchableOpacity>
 
@@ -264,11 +264,11 @@ export default function EditProfileScreen() {
                   value={oldPassword}
                   onChangeText={setOldPassword}
                   placeholder="Enter current password"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={ShopFlareColors.textLight}
                   secureTextEntry={!showOld}
                 />
                 <TouchableOpacity onPress={() => setShowOld(!showOld)} style={styles.eyeIcon}>
-                  <Ionicons name={showOld ? 'eye-off' : 'eye'} size={20} color="#999" />
+                  <Ionicons name={showOld ? 'eye-off' : 'eye'} size={20} color={ShopFlareColors.textLight} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -280,11 +280,11 @@ export default function EditProfileScreen() {
                   value={newPassword}
                   onChangeText={setNewPassword}
                   placeholder="Enter new password"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={ShopFlareColors.textLight}
                   secureTextEntry={!showNew}
                 />
                 <TouchableOpacity onPress={() => setShowNew(!showNew)} style={styles.eyeIcon}>
-                  <Ionicons name={showNew ? 'eye-off' : 'eye'} size={20} color="#999" />
+                  <Ionicons name={showNew ? 'eye-off' : 'eye'} size={20} color={ShopFlareColors.textLight} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -296,11 +296,11 @@ export default function EditProfileScreen() {
                   value={newPassword2}
                   onChangeText={setNewPassword2}
                   placeholder="Confirm new password"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={ShopFlareColors.textLight}
                   secureTextEntry={!showNew2}
                 />
                 <TouchableOpacity onPress={() => setShowNew2(!showNew2)} style={styles.eyeIcon}>
-                  <Ionicons name={showNew2 ? 'eye-off' : 'eye'} size={20} color="#999" />
+                  <Ionicons name={showNew2 ? 'eye-off' : 'eye'} size={20} color={ShopFlareColors.textLight} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -310,7 +310,7 @@ export default function EditProfileScreen() {
               disabled={savingPassword}
             >
               {savingPassword ? (
-                <ActivityIndicator color="#FFF" />
+                <ActivityIndicator color={ShopFlareColors.secondary} />
               ) : (
                 <ThemedText style={styles.saveButtonText}>Update Password</ThemedText>
               )}
@@ -323,19 +323,18 @@ export default function EditProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: ShopFlareColors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 56,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: ShopFlareColors.primary,
   },
   backButton: { padding: 8 },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: ShopFlareColors.secondary },
   content: { padding: 20, paddingBottom: 60 },
   avatarSection: { alignItems: 'center', marginBottom: 28 },
   avatar: {
@@ -351,18 +350,18 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontSize: 32, fontWeight: '700', color: ShopFlareColors.accent },
   username: { fontSize: 18, fontWeight: '700', marginBottom: 2 },
-  email: { fontSize: 14, color: '#666' },
+  email: { fontSize: 14, color: ShopFlareColors.textSecondary },
   fieldGroup: { marginBottom: 16 },
-  label: { fontSize: 13, fontWeight: '600', color: '#444', marginBottom: 6 },
+  label: { fontSize: 13, fontWeight: '600', color: ShopFlareColors.textSecondary, marginBottom: 6 },
   input: {
     borderWidth: 1.5,
-    borderColor: '#E8E8E8',
+    borderColor: ShopFlareColors.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#1A1A1A',
-    backgroundColor: '#FAFAFA',
+    color: ShopFlareColors.text,
+    backgroundColor: ShopFlareColors.background,
   },
   textArea: { height: 80, textAlignVertical: 'top', paddingTop: 12 },
   passwordInputWrapper: { position: 'relative' },
@@ -381,13 +380,13 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-  saveButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  saveButtonText: { color: ShopFlareColors.secondary, fontSize: 16, fontWeight: '700' },
   passwordToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     padding: 16,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: ShopFlareColors.background,
     borderRadius: 12,
     marginBottom: 16,
   },

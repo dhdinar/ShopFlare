@@ -95,7 +95,7 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Ionicons name={isBrandRegistration ? "storefront" : "bag"} size={40} color="#FFF" />
+            <Ionicons name={isBrandRegistration ? "storefront" : "bag"} size={40} color={ShopFlareColors.primary} />
           </View>
           <Text style={styles.brandName}>ShopFlare</Text>
         </View>
@@ -125,7 +125,7 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
               <Ionicons 
                 name="person" 
                 size={18} 
-                color={!isBrandRegistration ? '#FFF' : ShopFlareColors.textLight} 
+                color={!isBrandRegistration ? ShopFlareColors.secondary : ShopFlareColors.textLight} 
                 style={styles.segmentedIcon}
               />
               <Text style={[
@@ -143,7 +143,7 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
               <Ionicons 
                 name="storefront" 
                 size={18} 
-                color={isBrandRegistration ? '#FFF' : ShopFlareColors.textLight} 
+                color={isBrandRegistration ? ShopFlareColors.secondary : ShopFlareColors.textLight} 
                 style={styles.segmentedIcon}
               />
               <Text style={[
@@ -285,7 +285,7 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
             disabled={isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={ShopFlareColors.secondary} />
             ) : (
               <Text style={styles.buttonText}>
                 {isBrandRegistration ? 'Register Brand' : 'Create Account'}
@@ -309,7 +309,7 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: ShopFlareColors.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
   brandName: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
   },
   innerContainer: {
     flex: 1,
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
   },
   segmentedContainer: {
     flexDirection: 'row',
-    backgroundColor: '#F0F0F0',
+    backgroundColor: ShopFlareColors.borderLight,
     borderRadius: 12,
     padding: 4,
     marginBottom: 24,
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     color: ShopFlareColors.textLight,
   },
   segmentedTextActive: {
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
   },
   row: {
     flexDirection: 'row',
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 12,
     marginBottom: 16,
     borderWidth: 1,
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: ShopFlareColors.secondary,
     fontSize: 16,
     fontWeight: '600',
   },

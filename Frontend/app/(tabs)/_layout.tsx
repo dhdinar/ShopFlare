@@ -15,12 +15,12 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: ShopFlareColors.accent,
-        tabBarInactiveTintColor: '#AAAAAA',
+        tabBarInactiveTintColor: ShopFlareColors.textLight,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: ShopFlareColors.secondary,
           borderTopWidth: 0,
           elevation: 20,
           shadowColor: '#000',
@@ -67,7 +67,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View style={styles.cartIconContainer}>
               <View style={[styles.cartIconBg, focused && styles.cartIconBgActive]}>
-                <Ionicons name={focused ? 'bag' : 'bag-outline'} size={24} color={focused ? '#FFF' : color} />
+                <Ionicons name={focused ? 'bag' : 'bag-outline'} size={24} color={focused ? ShopFlareColors.secondary : color} />
               </View>
             </View>
           ),

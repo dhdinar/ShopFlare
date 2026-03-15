@@ -198,7 +198,7 @@ export default function ProductsScreen() {
     return (
       <ThemedView style={styles.container}>
         <View style={styles.emptyContainer}>
-          <Ionicons name="storefront-outline" size={64} color="#CCC" />
+          <Ionicons name="storefront-outline" size={64} color={ShopFlareColors.border} />
           <ThemedText style={styles.emptyTitle}>Brand Only</ThemedText>
           <ThemedText style={styles.emptyMessage}>This section is only available for brand accounts</ThemedText>
         </View>
@@ -212,7 +212,7 @@ export default function ProductsScreen() {
       <View style={styles.header}>
         <ThemedText style={styles.headerTitle}>My Products</ThemedText>
         <TouchableOpacity style={styles.addButton} onPress={openAddProduct}>
-          <Ionicons name="add" size={20} color="#FFF" />
+          <Ionicons name="add" size={20} color={ShopFlareColors.secondary} />
           <Text style={styles.addButtonText}>Add Product</Text>
         </TouchableOpacity>
       </View>
@@ -235,14 +235,14 @@ export default function ProductsScreen() {
 
       {/* Product List */}
       {isLoading ? (
-        <ActivityIndicator size="large" color="#000" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={ShopFlareColors.primary} style={{ marginTop: 40 }} />
       ) : products.length === 0 ? (
         <View style={styles.emptyProducts}>
-          <Ionicons name="cube-outline" size={64} color="#CCC" />
+          <Ionicons name="cube-outline" size={64} color={ShopFlareColors.textSecondary} />
           <ThemedText style={styles.emptyProductsText}>No products yet</ThemedText>
           <ThemedText style={styles.emptyProductsSubtext}>Add your first product to start selling</ThemedText>
           <TouchableOpacity style={styles.addFirstButton} onPress={openAddProduct}>
-            <Ionicons name="add-circle" size={20} color="#FFF" />
+            <Ionicons name="add-circle" size={20} color={ShopFlareColors.secondary} />
             <Text style={styles.addFirstButtonText}>Add Your First Product</Text>
           </TouchableOpacity>
         </View>
@@ -256,9 +256,9 @@ export default function ProductsScreen() {
             <View style={styles.productCard}>
               <View style={styles.productImagePlaceholder}>
                 {item.image ? (
-                  <Ionicons name="image" size={32} color="#999" />
+                  <Ionicons name="image" size={32} color={ShopFlareColors.primary} />
                 ) : (
-                  <Ionicons name="cube" size={32} color="#999" />
+                  <Ionicons name="cube" size={32} color={ShopFlareColors.primary} />
                 )}
               </View>
               <View style={styles.productInfo}>
@@ -286,13 +286,13 @@ export default function ProductsScreen() {
                   style={styles.actionBtn} 
                   onPress={() => openEditProduct(item)}
                 >
-                  <Ionicons name="pencil" size={20} color="#007AFF" />
+                  <Ionicons name="pencil" size={20} color={ShopFlareColors.warning} />
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={[styles.actionBtn, styles.deleteBtn]}
                   onPress={() => handleDeleteProduct(item)}
                 >
-                  <Ionicons name="trash" size={20} color="#FF3B30" />
+                  <Ionicons name="trash" size={20} color={ShopFlareColors.error} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -329,7 +329,7 @@ export default function ProductsScreen() {
               placeholder="Enter product name"
               value={productName}
               onChangeText={setProductName}
-              placeholderTextColor="#999"
+              placeholderTextColor={ShopFlareColors.textLight}
             />
 
             <Text style={styles.inputLabel}>Description</Text>
@@ -340,7 +340,7 @@ export default function ProductsScreen() {
               onChangeText={setProductDescription}
               multiline
               numberOfLines={3}
-              placeholderTextColor="#999"
+              placeholderTextColor={ShopFlareColors.textLight}
             />
 
             <Text style={styles.inputLabel}>Price *</Text>
@@ -350,7 +350,7 @@ export default function ProductsScreen() {
               value={productPrice}
               onChangeText={setProductPrice}
               keyboardType="decimal-pad"
-              placeholderTextColor="#999"
+              placeholderTextColor={ShopFlareColors.textLight}
             />
 
             <Text style={styles.inputLabel}>Sale Price (optional)</Text>
@@ -360,7 +360,7 @@ export default function ProductsScreen() {
               value={productSalePrice}
               onChangeText={setProductSalePrice}
               keyboardType="decimal-pad"
-              placeholderTextColor="#999"
+              placeholderTextColor={ShopFlareColors.textLight}
             />
 
             <Text style={styles.inputLabel}>Category *</Text>
@@ -380,7 +380,7 @@ export default function ProductsScreen() {
                   <Ionicons
                     name={cat.icon as any}
                     size={20}
-                    color={productCategory === cat.name ? '#FFF' : ShopFlareColors.accent}
+                    color={productCategory === cat.name ? ShopFlareColors.secondary : ShopFlareColors.accent}
                   />
                   <Text style={[
                     styles.categoryPickerText,
@@ -422,13 +422,13 @@ export default function ProductsScreen() {
                     style={styles.removeImageBtn}
                     onPress={() => removeImage(index)}
                   >
-                    <Ionicons name="close-circle" size={24} color="#FF3B30" />
+                    <Ionicons name="close-circle" size={24} color={ShopFlareColors.error} />
                   </TouchableOpacity>
                 </View>
               ))}
               {selectedImages.length < 4 && (
                 <TouchableOpacity style={styles.addImageBtn} onPress={pickImages}>
-                  <Ionicons name="camera" size={32} color="#666" />
+                  <Ionicons name="camera" size={32} color={ShopFlareColors.textSecondary} />
                   <Text style={styles.addImageText}>Add Photo</Text>
                 </TouchableOpacity>
               )}
@@ -441,7 +441,7 @@ export default function ProductsScreen() {
               value={productStock}
               onChangeText={setProductStock}
               keyboardType="number-pad"
-              placeholderTextColor="#999"
+              placeholderTextColor={ShopFlareColors.textLight}
             />
             
             <View style={{ height: 40 }} />
@@ -455,7 +455,7 @@ export default function ProductsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: ShopFlareColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -463,14 +463,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 16,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
+    paddingBottom: 20,
+    backgroundColor: ShopFlareColors.primary,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
+    color: ShopFlareColors.secondary,
   },
   addButton: {
     flexDirection: 'row',
@@ -486,7 +485,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   addButtonText: {
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
     fontWeight: '600',
     marginLeft: 6,
   },
@@ -497,7 +496,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -513,7 +512,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     marginTop: 4,
   },
   productList: {
@@ -522,7 +521,7 @@ const styles = StyleSheet.create({
   },
   productCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -536,7 +535,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 12,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: ShopFlareColors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -552,7 +551,7 @@ const styles = StyleSheet.create({
   },
   productCategory: {
     fontSize: 12,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     marginBottom: 6,
   },
   priceRow: {
@@ -567,7 +566,7 @@ const styles = StyleSheet.create({
   },
   salePrice: {
     fontSize: 14,
-    color: '#FF3B30',
+    color: ShopFlareColors.error,
     textDecorationLine: 'line-through',
   },
   stockRow: {
@@ -581,10 +580,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   inStock: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: ShopFlareColors.successLight,
   },
   outOfStock: {
-    backgroundColor: '#FFEBEE',
+    backgroundColor: ShopFlareColors.errorLight,
   },
   stockText: {
     fontSize: 11,
@@ -594,12 +593,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: '#FFF3E0',
+    backgroundColor: ShopFlareColors.warningLight,
   },
   inactiveText: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#E65100',
+    color: ShopFlareColors.warning,
   },
   productActions: {
     justifyContent: 'center',
@@ -609,12 +608,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: ShopFlareColors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   deleteBtn: {
-    backgroundColor: '#FFF0F0',
+    backgroundColor: ShopFlareColors.errorLight,
   },
   emptyContainer: {
     flex: 1,
@@ -630,7 +629,7 @@ const styles = StyleSheet.create({
   },
   emptyMessage: {
     fontSize: 16,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     textAlign: 'center',
   },
   emptyProducts: {
@@ -647,7 +646,7 @@ const styles = StyleSheet.create({
   },
   emptyProductsSubtext: {
     fontSize: 14,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -665,7 +664,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   addFirstButtonText: {
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
     fontWeight: '600',
     marginLeft: 8,
     fontSize: 16,
@@ -673,7 +672,7 @@ const styles = StyleSheet.create({
   // Modal Styles
   modalContainer: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -683,11 +682,11 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
+    borderBottomColor: ShopFlareColors.borderLight,
   },
   modalCancel: {
     fontSize: 16,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
   },
   modalTitle: {
     fontSize: 18,
@@ -707,16 +706,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
     marginTop: 16,
-    color: '#333',
+    color: ShopFlareColors.text,
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: ShopFlareColors.borderLight,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: ShopFlareColors.background,
   },
   textArea: {
     minHeight: 100,
@@ -737,13 +736,13 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: ShopFlareColors.borderLight,
   },
   removeImageBtn: {
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 12,
   },
   addImageBtn: {
@@ -751,15 +750,15 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#DDD',
+    borderColor: ShopFlareColors.borderLight,
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FAFAFA',
+    backgroundColor: ShopFlareColors.background,
   },
   addImageText: {
     fontSize: 10,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     marginTop: 4,
   },
   categoryPickerContainer: {
@@ -776,7 +775,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: ShopFlareColors.accent,
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
   },
   categoryPickerItemActive: {
     backgroundColor: ShopFlareColors.accent,
@@ -787,7 +786,7 @@ const styles = StyleSheet.create({
     color: ShopFlareColors.accent,
   },
   categoryPickerTextActive: {
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
   },
   subcategoryPickerContainer: {
     flexDirection: 'row',
@@ -799,8 +798,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#DDD',
-    backgroundColor: '#FAFAFA',
+    borderColor: ShopFlareColors.borderLight,
+    backgroundColor: ShopFlareColors.background,
   },
   subcategoryPickerItemActive: {
     backgroundColor: ShopFlareColors.accent,
@@ -808,10 +807,10 @@ const styles = StyleSheet.create({
   },
   subcategoryPickerText: {
     fontSize: 13,
-    color: '#555',
+    color: ShopFlareColors.textSecondary,
   },
   subcategoryPickerTextActive: {
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
     fontWeight: '600',
   },
 });

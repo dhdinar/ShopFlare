@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/constants/fashionData';
+import { ShopFlareColors } from '@/constants/theme';
 import { useFashion } from '@/context/FashionContext';
 import { Product } from '@/context/FashionContext';
 
@@ -45,7 +46,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
         </View>
         {totalRatings > 0 && (
           <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={14} color="#FFB800" />
+            <Ionicons name="star" size={14} color={ShopFlareColors.warning} />
             <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
             <Text style={styles.ratingCount}>({totalRatings})</Text>
           </View>

@@ -190,8 +190,8 @@ export default function AddressesScreen() {
           style={[styles.actionBtn, styles.deleteBtn]}
           onPress={() => handleDelete(item)}
         >
-          <Ionicons name="trash-outline" size={16} color="#F44336" />
-          <ThemedText style={[styles.actionBtnText, { color: '#F44336' }]}>Delete</ThemedText>
+          <Ionicons name="trash-outline" size={16} color={ShopFlareColors.error} />
+          <ThemedText style={[styles.actionBtnText, { color: ShopFlareColors.error }]}>Delete</ThemedText>
         </TouchableOpacity>
       </View>
     </View>
@@ -202,11 +202,11 @@ export default function AddressesScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={ShopFlareColors.primary} />
+          <Ionicons name="arrow-back" size={24} color={ShopFlareColors.secondary} />
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle}>My Addresses</ThemedText>
         <TouchableOpacity onPress={openAdd} style={styles.addButton}>
-          <Ionicons name="add" size={26} color={ShopFlareColors.primary} />
+          <Ionicons name="add" size={26} color={ShopFlareColors.secondary} />
         </TouchableOpacity>
       </View>
 
@@ -214,7 +214,7 @@ export default function AddressesScreen() {
         <ActivityIndicator style={{ marginTop: 60 }} size="large" color={ShopFlareColors.primary} />
       ) : addresses.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="location-outline" size={64} color="#CCC" />
+          <Ionicons name="location-outline" size={64} color={ShopFlareColors.secondary} />
           <ThemedText style={styles.emptyTitle}>No Addresses Yet</ThemedText>
           <ThemedText style={styles.emptySubtitle}>Add a delivery address to get started</ThemedText>
           <TouchableOpacity style={styles.addFirstBtn} onPress={openAdd}>
@@ -243,7 +243,7 @@ export default function AddressesScreen() {
                 {editingAddress ? 'Edit Address' : 'New Address'}
               </ThemedText>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close" size={24} color={ShopFlareColors.textLight} />
               </TouchableOpacity>
             </View>
 
@@ -257,7 +257,7 @@ export default function AddressesScreen() {
                     style={[styles.labelChip, form.label === l && styles.labelChipActive]}
                     onPress={() => setForm(f => ({ ...f, label: l }))}
                   >
-                    <Ionicons name={LABEL_ICONS[l] as any} size={14} color={form.label === l ? '#FFF' : '#666'} />
+                    <Ionicons name={LABEL_ICONS[l] as any} size={14} color={form.label === l ? ShopFlareColors.secondary : ShopFlareColors.textSecondary} />
                     <ThemedText style={[styles.labelChipText, form.label === l && styles.labelChipTextActive]}>
                       {l.charAt(0).toUpperCase() + l.slice(1)}
                     </ThemedText>
@@ -282,7 +282,7 @@ export default function AddressesScreen() {
                     value={(form as any)[field.key] || ''}
                     onChangeText={text => setForm(f => ({ ...f, [field.key]: text }))}
                     placeholder={field.placeholder}
-                    placeholderTextColor="#999"
+                    placeholderTextColor={ShopFlareColors.textLight}
                   />
                 </View>
               ))}
@@ -306,7 +306,7 @@ export default function AddressesScreen() {
                 disabled={saving}
               >
                 {saving ? (
-                  <ActivityIndicator color="#FFF" />
+                  <ActivityIndicator color={ShopFlareColors.secondary} />
                 ) : (
                   <ThemedText style={styles.saveButtonText}>
                     {editingAddress ? 'Save Changes' : 'Add Address'}
@@ -322,34 +322,33 @@ export default function AddressesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: ShopFlareColors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 56,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: ShopFlareColors.primary,
   },
   backButton: { padding: 8 },
   addButton: { padding: 8 },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: ShopFlareColors.secondary },
   list: { padding: 16, gap: 12, paddingBottom: 40 },
   card: {
-    backgroundColor: '#FAFAFA',
+    backgroundColor: ShopFlareColors.background,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#EEE',
+    borderColor: ShopFlareColors.borderLight,
   },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   labelBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: ShopFlareColors.borderLight,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -361,17 +360,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  defaultBadgeText: { fontSize: 11, fontWeight: '700', color: '#FFF' },
+  defaultBadgeText: { fontSize: 11, fontWeight: '700', color: ShopFlareColors.secondary },
   cardName: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
-  cardText: { fontSize: 14, color: '#555', lineHeight: 20 },
-  cardPhone: { fontSize: 13, color: '#999', marginTop: 4 },
+  cardText: { fontSize: 14, color: ShopFlareColors.textSecondary, lineHeight: 20 },
+  cardPhone: { fontSize: 13, color: ShopFlareColors.textLight, marginTop: 4 },
   cardActions: {
     flexDirection: 'row',
     gap: 12,
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#EEE',
+    borderTopColor: ShopFlareColors.borderLight,
   },
   actionBtn: {
     flexDirection: 'row',
@@ -387,7 +386,7 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   emptyTitle: { fontSize: 20, fontWeight: '700', marginTop: 16, marginBottom: 6 },
-  emptySubtitle: { fontSize: 14, color: '#777', textAlign: 'center', marginBottom: 24 },
+  emptySubtitle: { fontSize: 14, color: ShopFlareColors.textSecondary, textAlign: 'center', marginBottom: 24 },
   addFirstBtn: {
     backgroundColor: ShopFlareColors.accent,
     borderRadius: 12,
@@ -399,7 +398,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-  addFirstBtnText: { color: '#FFF', fontWeight: '700', fontSize: 15 },
+  addFirstBtnText: { color: ShopFlareColors.secondary, fontWeight: '700', fontSize: 15 },
   // Modal styles
   modalOverlay: {
     flex: 1,
@@ -407,7 +406,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
@@ -421,16 +420,16 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 18, fontWeight: '700' },
   fieldGroup: { marginBottom: 14 },
-  label: { fontSize: 13, fontWeight: '600', color: '#444', marginBottom: 5 },
+  label: { fontSize: 13, fontWeight: '600', color: ShopFlareColors.textSecondary, marginBottom: 5 },
   input: {
     borderWidth: 1.5,
-    borderColor: '#E8E8E8',
+    borderColor: ShopFlareColors.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 11,
     fontSize: 15,
-    color: '#1A1A1A',
-    backgroundColor: '#FAFAFA',
+    color: ShopFlareColors.text,
+    backgroundColor: ShopFlareColors.background,
   },
   labelRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   labelChip: {
@@ -440,11 +439,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: ShopFlareColors.borderLight,
   },
   labelChipActive: { backgroundColor: ShopFlareColors.accent },
-  labelChipText: { fontSize: 13, fontWeight: '600', color: '#666' },
-  labelChipTextActive: { color: '#FFF' },
+  labelChipText: { fontSize: 13, fontWeight: '600', color: ShopFlareColors.textSecondary },
+  labelChipTextActive: { color: ShopFlareColors.secondary },
   defaultToggle: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -460,5 +459,5 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 16,
   },
-  saveButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  saveButtonText: { color: ShopFlareColors.secondary, fontSize: 16, fontWeight: '700' },
 });

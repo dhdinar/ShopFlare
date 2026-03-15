@@ -47,18 +47,18 @@ function SettingRow({
         <Ionicons name={icon as any} size={20} color={iconColor || ShopFlareColors.primary} />
       </View>
       <View style={styles.settingText}>
-        <ThemedText style={[styles.settingTitle, danger && { color: '#F44336' }]}>{title}</ThemedText>
+        <ThemedText style={[styles.settingTitle, danger && { color: ShopFlareColors.error }]}>{title}</ThemedText>
         {subtitle && <ThemedText style={styles.settingSubtitle}>{subtitle}</ThemedText>}
       </View>
       {onToggle !== undefined && value !== undefined ? (
         <Switch
           value={value}
           onValueChange={onToggle}
-          trackColor={{ false: '#E0E0E0', true: ShopFlareColors.accent }}
-          thumbColor="#FFF"
+          trackColor={{ false: ShopFlareColors.border, true: ShopFlareColors.accent }}
+          thumbColor={ShopFlareColors.secondary}
         />
       ) : showArrow ? (
-        <Ionicons name="chevron-forward" size={18} color="#CCC" />
+        <Ionicons name="chevron-forward" size={18} color={ShopFlareColors.textLight} />
       ) : null}
     </TouchableOpacity>
   );
@@ -98,7 +98,7 @@ export default function SettingsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={ShopFlareColors.primary} />
+          <Ionicons name="arrow-back" size={24} color={ShopFlareColors.secondary} />
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle}>Settings</ThemedText>
         <View style={{ width: 40 }} />
@@ -191,7 +191,7 @@ export default function SettingsScreen() {
           <SettingRow
             icon="trash-outline"
             title="Delete Account"
-            iconColor="#F44336"
+            iconColor={ShopFlareColors.error}
             danger
             onPress={handleDeleteAccount}
             showArrow
@@ -204,25 +204,23 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: ShopFlareColors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 56,
-    paddingBottom: 16,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: ShopFlareColors.primary,
   },
   backButton: { padding: 8 },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: ShopFlareColors.secondary },
   content: { padding: 16, paddingBottom: 60 },
   sectionLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#888',
+    color: ShopFlareColors.textLight,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginTop: 24,
@@ -230,11 +228,11 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   sectionCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#EEE',
+    borderColor: ShopFlareColors.borderLight,
   },
   settingRow: {
     flexDirection: 'row',
@@ -251,6 +249,6 @@ const styles = StyleSheet.create({
   },
   settingText: { flex: 1 },
   settingTitle: { fontSize: 15, fontWeight: '600' },
-  settingSubtitle: { fontSize: 12, color: '#888', marginTop: 1 },
-  divider: { height: 1, backgroundColor: '#F0F0F0', marginLeft: 64 },
+  settingSubtitle: { fontSize: 12, color: ShopFlareColors.textLight, marginTop: 1 },
+  divider: { height: 1, backgroundColor: ShopFlareColors.borderLight, marginLeft: 64 },
 });

@@ -52,6 +52,20 @@ export const ShopFlareColors = {
   info: '#2196F3',
   infoLight: '#E3F2FD',
   skeleton: '#E8E8E8',
+  statusPending: '#FFA726',
+  statusPendingLight: '#FFF3E0',
+  statusConfirmed: '#42A5F5',
+  statusConfirmedLight: '#E3F2FD',
+  statusProcessing: '#AB47BC',
+  statusProcessingLight: '#F3E5F5',
+  statusShipped: '#7E57C2',
+  statusShippedLight: '#EDE7F6',
+  statusDelivered: '#66BB6A',
+  statusDeliveredLight: '#E8F5E9',
+  statusCancelled: '#EF5350',
+  statusCancelledLight: '#FFEBEE',
+  statusRefunded: '#78909C',
+  statusRefundedLight: '#ECEFF1',
 };
 
 export const Fonts = Platform.select({

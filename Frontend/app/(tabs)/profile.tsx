@@ -1,4 +1,4 @@
-﻿import { StyleSheet, Text, View, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { ThemedText } from '@/components/themed-text';
@@ -55,12 +55,12 @@ export default function ProfileScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <View style={styles.brandHeader}>
             <View style={styles.brandAvatar}>
-              <Ionicons name="storefront" size={36} color="#000" />
+              <Ionicons name="storefront" size={36} color={ShopFlareColors.primary} />
             </View>
             <ThemedText style={styles.brandName}>{user?.username}</ThemedText>
             <ThemedText style={styles.email}>{user?.email}</ThemedText>
             <View style={styles.brandBadge}>
-              <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
+              <Ionicons name="checkmark-circle" size={14} color={ShopFlareColors.success} />
               <Text style={styles.brandBadgeText}>Brand Account</Text>
             </View>
           </View>
@@ -69,7 +69,7 @@ export default function ProfileScreen() {
             <View style={styles.sectionHeader}>
               <Ionicons name="storefront-outline" size={24} color={ShopFlareColors.primary} />
               <ThemedText style={styles.sectionTitle}>Brand Profile</ThemedText>
-              <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+              <Ionicons name="chevron-forward-outline" size={20} color={ShopFlareColors.textLight} />
             </View>
             <ThemedText style={styles.sectionSubtitle}>Update your brand information</ThemedText>
           </TouchableOpacity>
@@ -78,7 +78,7 @@ export default function ProfileScreen() {
             <View style={styles.sectionHeader}>
               <Ionicons name="settings-outline" size={24} color={ShopFlareColors.primary} />
               <ThemedText style={styles.sectionTitle}>Brand Settings</ThemedText>
-              <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+              <Ionicons name="chevron-forward-outline" size={20} color={ShopFlareColors.textLight} />
             </View>
             <ThemedText style={styles.sectionSubtitle}>Manage your brand preferences</ThemedText>
           </TouchableOpacity>
@@ -87,7 +87,7 @@ export default function ProfileScreen() {
             <View style={styles.sectionHeader}>
               <Ionicons name="analytics-outline" size={24} color={ShopFlareColors.primary} />
               <ThemedText style={styles.sectionTitle}>Analytics</ThemedText>
-              <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+              <Ionicons name="chevron-forward-outline" size={20} color={ShopFlareColors.textLight} />
             </View>
             <ThemedText style={styles.sectionSubtitle}>View sales and performance data</ThemedText>
           </TouchableOpacity>
@@ -96,13 +96,13 @@ export default function ProfileScreen() {
             <View style={styles.sectionHeader}>
               <Ionicons name="help-circle-outline" size={24} color={ShopFlareColors.primary} />
               <ThemedText style={styles.sectionTitle}>Help & Support</ThemedText>
-              <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+              <Ionicons name="chevron-forward-outline" size={20} color={ShopFlareColors.textLight} />
             </View>
             <ThemedText style={styles.sectionSubtitle}>Get help and contact support</ThemedText>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
+            <Ionicons name="log-out-outline" size={20} color={ShopFlareColors.primary} />
             <ThemedText style={styles.logoutText}>Logout</ThemedText>
           </TouchableOpacity>
         </ScrollView>
@@ -130,7 +130,7 @@ export default function ProfileScreen() {
           <View style={styles.sectionHeader}>
             <Ionicons name="bag-outline" size={24} color={ShopFlareColors.primary} />
             <ThemedText style={styles.sectionTitle}>My Orders</ThemedText>
-            <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+            <Ionicons name="chevron-forward-outline" size={20} color={ShopFlareColors.textLight} />
           </View>
           <ThemedText style={styles.sectionSubtitle}>View your order history and status</ThemedText>
         </TouchableOpacity>
@@ -139,7 +139,7 @@ export default function ProfileScreen() {
           <View style={styles.sectionHeader}>
             <Ionicons name="location-outline" size={24} color={ShopFlareColors.primary} />
             <ThemedText style={styles.sectionTitle}>My Addresses</ThemedText>
-            <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+            <Ionicons name="chevron-forward-outline" size={20} color={ShopFlareColors.textLight} />
           </View>
           <ThemedText style={styles.sectionSubtitle}>Manage delivery addresses</ThemedText>
         </TouchableOpacity>
@@ -148,7 +148,7 @@ export default function ProfileScreen() {
           <View style={styles.sectionHeader}>
             <Ionicons name="star-outline" size={24} color={ShopFlareColors.primary} />
             <ThemedText style={styles.sectionTitle}>Reviews & Ratings</ThemedText>
-            <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+            <Ionicons name="chevron-forward-outline" size={20} color={ShopFlareColors.textLight} />
           </View>
           <ThemedText style={styles.sectionSubtitle}>View your product reviews</ThemedText>
         </TouchableOpacity>
@@ -157,7 +157,7 @@ export default function ProfileScreen() {
           <View style={styles.sectionHeader}>
             <Ionicons name="person-outline" size={24} color={ShopFlareColors.primary} />
             <ThemedText style={styles.sectionTitle}>Edit Profile</ThemedText>
-            <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+            <Ionicons name="chevron-forward-outline" size={20} color={ShopFlareColors.textLight} />
           </View>
           <ThemedText style={styles.sectionSubtitle}>Update your personal information</ThemedText>
         </TouchableOpacity>
@@ -166,7 +166,7 @@ export default function ProfileScreen() {
           <View style={styles.sectionHeader}>
             <Ionicons name="settings-outline" size={24} color={ShopFlareColors.primary} />
             <ThemedText style={styles.sectionTitle}>Settings</ThemedText>
-            <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+            <Ionicons name="chevron-forward-outline" size={20} color={ShopFlareColors.textLight} />
           </View>
           <ThemedText style={styles.sectionSubtitle}>App preferences and notifications</ThemedText>
         </TouchableOpacity>
@@ -175,13 +175,13 @@ export default function ProfileScreen() {
           <View style={styles.sectionHeader}>
             <Ionicons name="help-circle-outline" size={24} color={ShopFlareColors.primary} />
             <ThemedText style={styles.sectionTitle}>Help & Support</ThemedText>
-            <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+            <Ionicons name="chevron-forward-outline" size={20} color={ShopFlareColors.textLight} />
           </View>
           <ThemedText style={styles.sectionSubtitle}>Get help and contact support</ThemedText>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
+          <Ionicons name="log-out-outline" size={20} color={ShopFlareColors.primary} />
           <ThemedText style={styles.logoutText}>Logout</ThemedText>
         </TouchableOpacity>
       </ScrollView>
@@ -190,7 +190,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: ShopFlareColors.background },
   scrollContent: { paddingBottom: 40 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
   emptyTitle: { fontSize: 24, fontWeight: 'bold', marginTop: 16, marginBottom: 8, textAlign: 'center' },
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  buttonText: { color: ShopFlareColors.secondary, fontSize: 16, fontWeight: '600' },
   signupButtonText: { fontSize: 16, fontWeight: '600', color: ShopFlareColors.accent },
   profileHeader: { alignItems: 'center', marginBottom: 32, paddingTop: 24 },
   avatar: {
@@ -234,15 +234,15 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontSize: 32, fontWeight: 'bold', color: ShopFlareColors.accent },
   username: { fontSize: 24, fontWeight: 'bold', marginBottom: 4 },
-  email: { fontSize: 14, opacity: 0.6 },
-  fullName: { fontSize: 15, color: '#555', marginTop: 4 },
+  email: { fontSize: 14, opacity: 0.85 },
+  fullName: { fontSize: 15, color: ShopFlareColors.textSecondary, marginTop: 4 },
   section: {
     marginHorizontal: 16,
     marginVertical: 6,
     paddingVertical: 14,
     paddingHorizontal: 14,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderWidth: 0,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
@@ -251,8 +251,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', flex: 1, color: '#1A1A1A' },
-  sectionSubtitle: { fontSize: 13, opacity: 0.6, marginTop: 8, marginLeft: 38, color: '#000000' },
+  sectionTitle: { fontSize: 16, fontWeight: '600', flex: 1, color: ShopFlareColors.text },
+  sectionSubtitle: { fontSize: 13, marginTop: 8, marginLeft: 38, color: ShopFlareColors.textSecondary },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -269,14 +269,14 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  logoutText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  logoutText: { color: ShopFlareColors.secondary, fontSize: 16, fontWeight: '600' },
   brandHeader: {
     alignItems: 'center',
     marginBottom: 24,
     paddingTop: 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: ShopFlareColors.borderLight,
   },
   brandAvatar: {
     width: 88,
@@ -293,11 +293,11 @@ const styles = StyleSheet.create({
   brandBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: ShopFlareColors.successLight,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
     marginTop: 8,
   },
-  brandBadgeText: { fontSize: 12, color: '#4CAF50', marginLeft: 4, fontWeight: '500' },
+  brandBadgeText: { fontSize: 12, color: ShopFlareColors.success, marginLeft: 4, fontWeight: '500' },
 });

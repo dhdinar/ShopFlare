@@ -223,7 +223,7 @@ export default function ProductDetailScreen() {
   if (!product) {
     return (
       <ThemedView style={styles.loadingContainer}>
-        <Ionicons name="alert-circle-outline" size={60} color="#999" />
+        <Ionicons name="alert-circle-outline" size={60} color={ShopFlareColors.border} />
         <ThemedText style={styles.errorText}>Product not found</ThemedText>
         <TouchableOpacity style={styles.backHomeButton} onPress={() => router.back()}>
           <ThemedText style={styles.backHomeButtonText}>Go Back</ThemedText>
@@ -238,7 +238,7 @@ export default function ProductDetailScreen() {
     <ThemedView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color={ShopFlareColors.primary} />
+          <Ionicons name="chevron-back" size={28} color={ShopFlareColors.secondary} />
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle} numberOfLines={1}>{product.name}</ThemedText>
         <TouchableOpacity onPress={() => toggleWishlist(product.id)}>
@@ -326,7 +326,7 @@ export default function ProductDetailScreen() {
                     )}
                     <View style={styles.swipeHintTop}>
                       <ThemedText style={styles.swipeHintTextBold}>Swipe Left for Reviews</ThemedText>
-                      <Ionicons name="arrow-forward" size={14} color="#1A1A1A" />
+                      <Ionicons name="arrow-forward" size={14} color={ShopFlareColors.primary} />
                     </View>
                   </View>
                   
@@ -348,7 +348,7 @@ export default function ProductDetailScreen() {
                   
                   <View style={styles.ratingRowContainer}>
                     <View style={styles.ratingContainer}>
-                      <Ionicons name="star" size={16} color="#FFD700" />
+                      <Ionicons name="star" size={16} color={ShopFlareColors.warning} />
                       <ThemedText style={styles.ratingText}>{averageRating > 0 ? averageRating.toFixed(1) : '0.0'}</ThemedText>
                       <ThemedText style={styles.reviewCount}>({totalReviews} reviews)</ThemedText>
                     </View>
@@ -415,21 +415,21 @@ export default function ProductDetailScreen() {
                             onPress={() => setQuantity(Math.max(1, quantity - 1))} 
                             style={styles.quantityButton}
                           >
-                            <Ionicons name="remove" size={20} color="#666" />
+                            <Ionicons name="remove" size={20} color={ShopFlareColors.textSecondary} />
                           </TouchableOpacity>
                           <ThemedText style={styles.quantityValue}>{quantity}</ThemedText>
                           <TouchableOpacity 
                             onPress={() => setQuantity(quantity + 1)} 
                             style={[styles.quantityButton, styles.quantityButtonPlus]}
                           >
-                            <Ionicons name="add" size={20} color="#FFF" />
+                            <Ionicons name="add" size={20} color={ShopFlareColors.secondary} />
                           </TouchableOpacity>
                         </View>
                       </View>
 
                       {/* Add to Cart Button */}
                       <TouchableOpacity style={styles.addToCartButton} onPress={handleAddToCart}>
-                        <Ionicons name="cart" size={20} color="#FFFFFF" />
+                        <Ionicons name="cart" size={20} color={ShopFlareColors.secondary} />
                         <ThemedText style={styles.addToCartText}>Add to Cart</ThemedText>
                       </TouchableOpacity>
 
@@ -461,7 +461,7 @@ export default function ProductDetailScreen() {
                 /* Reviews Tab */
                 <View style={styles.reviewsContainer}>
                   <View style={styles.swipeHintTop}>
-                    <Ionicons name="arrow-back" size={14} color="#1A1A1A" />
+                    <Ionicons name="arrow-back" size={14} color={ShopFlareColors.secondary} />
                     <ThemedText style={styles.swipeHintTextBold}>Swipe Right for Details</ThemedText>
                   </View>
                   
@@ -482,7 +482,7 @@ export default function ProductDetailScreen() {
                               <Ionicons 
                                 name={star <= reviewRating ? "star" : "star-outline"} 
                                 size={24} 
-                                color="#FFD700" 
+                                color={ShopFlareColors.primary} 
                               />
                             </TouchableOpacity>
                           ))}
@@ -534,7 +534,7 @@ export default function ProductDetailScreen() {
                                   key={star}
                                   name={star <= review.rating ? "star" : "star-outline"} 
                                   size={14} 
-                                  color="#FFD700" 
+                                  color={ShopFlareColors.primary} 
                                 />
                               ))}
                             </View>
@@ -550,7 +550,7 @@ export default function ProductDetailScreen() {
                     </View>
                   ) : (
                     <View style={styles.noReviews}>
-                      <Ionicons name="chatbubble-outline" size={48} color="#CCC" />
+                      <Ionicons name="chatbubble-outline" size={48} color={ShopFlareColors.primary} />
                       <ThemedText style={styles.noReviewsText}>No reviews yet</ThemedText>
                       <ThemedText style={styles.noReviewsSubtext}>Be the first to review this product!</ThemedText>
                     </View>
@@ -562,7 +562,7 @@ export default function ProductDetailScreen() {
                       <TextInput
                         style={styles.reviewInput}
                         placeholder="Write your review..."
-                        placeholderTextColor="#999"
+                        placeholderTextColor={ShopFlareColors.textLight}
                         value={reviewComment}
                         onChangeText={setReviewComment}
                         multiline
@@ -574,9 +574,9 @@ export default function ProductDetailScreen() {
                         disabled={isSubmittingReview}
                       >
                         {isSubmittingReview ? (
-                          <ActivityIndicator size="small" color="#FFF" />
+                          <ActivityIndicator size="small" color={ShopFlareColors.secondary} />
                         ) : (
-                          <Ionicons name="send" size={18} color="#FFFFFF" />
+                          <Ionicons name="send" size={18} color={ShopFlareColors.secondary} />
                         )}
                       </TouchableOpacity>
                     </View>
@@ -595,22 +595,22 @@ export default function ProductDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: ShopFlareColors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: ShopFlareColors.background,
   },
   loadingText: {
     marginTop: 12,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     fontSize: 14,
   },
   errorText: {
     marginTop: 16,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     fontSize: 16,
   },
   backHomeButton: {
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   backHomeButtonText: {
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
     fontWeight: '600',
   },
   header: {
@@ -629,26 +629,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingTop: 50,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    backgroundColor: '#FFFFFF',
+    paddingTop: 40,
+    paddingBottom: 16,
+    backgroundColor: ShopFlareColors.primary,
   },
   backButton: {
     padding: 8,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
-    color: '#1A1A1A',
+    color: ShopFlareColors.secondary,
     marginHorizontal: 8,
   },
   imageContainer: {
     height: 320,
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -670,7 +668,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#DDD',
+    backgroundColor: ShopFlareColors.borderLight,
     marginHorizontal: 4,
   },
   imageDotActive: {
@@ -680,7 +678,7 @@ const styles = StyleSheet.create({
   infoContainer: {
     paddingHorizontal: 20,
     paddingVertical: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     marginTop: 8,
     borderRadius: 16,
     marginHorizontal: 12,
@@ -700,18 +698,18 @@ const styles = StyleSheet.create({
   productTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
     flex: 1,
   },
   lowStockBadge: {
-    backgroundColor: '#FFF3E0',
+    backgroundColor: ShopFlareColors.warningLight,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
     marginLeft: 8,
   },
   lowStockText: {
-    color: '#FF9800',
+    color: ShopFlareColors.warning,
     fontSize: 11,
     fontWeight: '600',
   },
@@ -727,7 +725,7 @@ const styles = StyleSheet.create({
   },
   category: {
     fontSize: 14,
-    color: '#999',
+    color: ShopFlareColors.textLight,
   },
   priceContainer: {
     flexDirection: 'row',
@@ -741,7 +739,7 @@ const styles = StyleSheet.create({
   },
   originalPrice: {
     fontSize: 16,
-    color: '#999',
+    color: ShopFlareColors.textLight,
     textDecorationLine: 'line-through',
   },
   discountBadge: {
@@ -751,7 +749,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   discountText: {
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -774,21 +772,21 @@ const styles = StyleSheet.create({
   swipeHintTextBold: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
   },
   ratingText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
   },
   reviewCount: {
     fontSize: 12,
-    color: '#999',
+    color: ShopFlareColors.textLight,
     marginLeft: 4,
   },
   description: {
     fontSize: 14,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     lineHeight: 22,
   },
   optionContainer: {
@@ -797,7 +795,7 @@ const styles = StyleSheet.create({
   optionLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
   },
   optionValues: {
     flexDirection: 'row',
@@ -808,9 +806,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: ShopFlareColors.background,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: ShopFlareColors.border,
   },
   selectedOption: {
     backgroundColor: ShopFlareColors.primary,
@@ -818,11 +816,11 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 14,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     fontWeight: '500',
   },
   selectedOptionText: {
-    color: '#FFFFFF',
+    color: ShopFlareColors.secondary,
   },
   quantityContainer: {
     gap: 10,
@@ -836,7 +834,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: ShopFlareColors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -850,7 +848,7 @@ const styles = StyleSheet.create({
   quantityValue: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
     minWidth: 40,
     textAlign: 'center',
   },
@@ -870,7 +868,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   addToCartText: {
-    color: '#FFFFFF',
+    color: ShopFlareColors.secondary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -881,7 +879,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderWidth: 2,
     borderColor: ShopFlareColors.primary,
   },
@@ -894,7 +892,7 @@ const styles = StyleSheet.create({
   reviewsContainer: {
     paddingHorizontal: 20,
     paddingVertical: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     marginTop: 8,
     borderRadius: 16,
     marginHorizontal: 12,
@@ -910,7 +908,7 @@ const styles = StyleSheet.create({
   },
   swipeHintText: {
     fontSize: 13,
-    color: '#999',
+    color: ShopFlareColors.textLight,
     fontStyle: 'italic',
   },
   reviewSummary: {
@@ -921,7 +919,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
+    borderBottomColor: ShopFlareColors.borderLight,
   },
   reviewSummaryLeft: {
     alignItems: 'flex-start',
@@ -929,12 +927,12 @@ const styles = StyleSheet.create({
   avgRatingBig: {
     fontSize: 36,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
   },
   ratingsLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
     marginTop: 2,
   },
   starsRow: {
@@ -944,7 +942,7 @@ const styles = StyleSheet.create({
   },
   totalReviewsText: {
     fontSize: 12,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     marginTop: 4,
   },
   yourRatingSection: {
@@ -953,7 +951,7 @@ const styles = StyleSheet.create({
   },
   yourRatingLabel: {
     fontSize: 12,
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
     marginTop: 8,
     fontWeight: '700',
   },
@@ -970,7 +968,7 @@ const styles = StyleSheet.create({
   writeReviewText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
   },
   reviewInputContainer: {
     flexDirection: 'row',
@@ -979,18 +977,18 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#EEE',
+    borderTopColor: ShopFlareColors.borderLight,
   },
   reviewInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: ShopFlareColors.border,
     borderRadius: 24,
     paddingHorizontal: 18,
     paddingVertical: 12,
     maxHeight: 100,
     fontSize: 14,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: ShopFlareColors.background,
   },
   reviewSendButton: {
     width: 44,
@@ -1006,7 +1004,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   reviewForm: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: ShopFlareColors.background,
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
@@ -1014,7 +1012,7 @@ const styles = StyleSheet.create({
   reviewFormTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
     marginBottom: 12,
   },
   ratingSelector: {
@@ -1024,7 +1022,7 @@ const styles = StyleSheet.create({
   },
   ratingSelectorLabel: {
     fontSize: 14,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     marginRight: 12,
   },
   starSelector: {
@@ -1032,9 +1030,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   reviewTitleInput: {
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: ShopFlareColors.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1042,9 +1040,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   reviewCommentInput: {
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: ShopFlareColors.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1062,13 +1060,13 @@ const styles = StyleSheet.create({
   submitReviewText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
   },
   reviewsList: {
     marginTop: 8,
   },
   reviewItem: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: ShopFlareColors.background,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -1095,16 +1093,16 @@ const styles = StyleSheet.create({
   reviewerInitial: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
   },
   reviewerName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
   },
   reviewDate: {
     fontSize: 12,
-    color: '#999',
+    color: ShopFlareColors.textLight,
   },
   reviewStars: {
     flexDirection: 'row',
@@ -1113,12 +1111,12 @@ const styles = StyleSheet.create({
   reviewTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
     marginBottom: 4,
   },
   reviewComment: {
     fontSize: 14,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     lineHeight: 20,
   },
   noReviews: {
@@ -1128,12 +1126,12 @@ const styles = StyleSheet.create({
   noReviewsText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#999',
+    color: ShopFlareColors.textLight,
     marginTop: 12,
   },
   noReviewsSubtext: {
     fontSize: 14,
-    color: '#BBB',
+    color: ShopFlareColors.textLight,
     marginTop: 4,
   },
 });

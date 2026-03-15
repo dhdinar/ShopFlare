@@ -72,7 +72,7 @@ export default function WishlistScreen() {
         </View>
       ) : wishlistItems.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="heart-outline" size={80} color="#DDD" />
+          <Ionicons name="heart-outline" size={80} color={ShopFlareColors.error} />
           <ThemedText style={styles.emptyTitle}>Your wishlist is empty</ThemedText>
           <ThemedText style={styles.emptySubtitle}>Save items you love by tapping the heart icon</ThemedText>
           <TouchableOpacity style={styles.shopButton} onPress={() => router.push('/(tabs)')}>
@@ -103,7 +103,7 @@ export default function WishlistScreen() {
                     <ThemedText style={styles.brandName}>{item.brand_name}</ThemedText>
                   )}
                   <View style={styles.ratingRow}>
-                    <Ionicons name="star" size={14} color="#FFD700" />
+                    <Ionicons name="star" size={14} color={ShopFlareColors.warning} />
                     <ThemedText style={styles.ratingText}>{item.rating ? parseFloat(String(item.rating)).toFixed(1) : '4.5'}</ThemedText>
                   </View>
                   <View style={styles.priceRow}>
@@ -121,7 +121,7 @@ export default function WishlistScreen() {
                       handleAddToCart(item);
                     }}
                   >
-                    <Ionicons name="bag-add-outline" size={20} color="#FFF" />
+                    <Ionicons name="bag-add-outline" size={20} color={ShopFlareColors.primary} />
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={styles.removeButton} 
@@ -145,7 +145,7 @@ export default function WishlistScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: ShopFlareColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -159,11 +159,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: ShopFlareColors.secondary,
   },
   itemCount: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: ShopFlareColors.secondary,
     opacity: 0.9,
   },
   loadingContainer: {
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     fontSize: 14,
   },
   emptyContainer: {
@@ -185,12 +185,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
     marginTop: 20,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#999',
+    color: ShopFlareColors.textLight,
     textAlign: 'center',
     marginTop: 8,
   },
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   shopButtonText: {
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
     fontWeight: '600',
     fontSize: 16,
   },
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   },
   wishlistCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 16,
     padding: 12,
     marginBottom: 12,
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 12,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: ShopFlareColors.background,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: ShopFlareColors.text,
   },
   brandName: {
     fontSize: 12,
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 12,
-    color: '#666',
+    color: ShopFlareColors.textSecondary,
     marginLeft: 4,
   },
   priceRow: {
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   },
   originalPrice: {
     fontSize: 12,
-    color: '#999',
+    color: ShopFlareColors.textLight,
     textDecorationLine: 'line-through',
   },
   actions: {
@@ -293,10 +293,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   removeButton: {
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     padding: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: ShopFlareColors.border,
   },
 });

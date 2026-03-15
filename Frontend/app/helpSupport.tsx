@@ -64,7 +64,7 @@ function FAQItem({ faq }: { faq: FAQ }) {
     >
       <View style={styles.faqHeader}>
         <ThemedText style={styles.faqQuestion}>{faq.q}</ThemedText>
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color="#999" />
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={ShopFlareColors.primary} />
       </View>
       {open && <ThemedText style={styles.faqAnswer}>{faq.a}</ThemedText>}
     </TouchableOpacity>
@@ -95,7 +95,7 @@ export default function HelpSupportScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={ShopFlareColors.primary} />
+          <Ionicons name="arrow-back" size={24} color={ShopFlareColors.secondary} />
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle}>Help & Support</ThemedText>
         <View style={{ width: 40 }} />
@@ -155,7 +155,7 @@ export default function HelpSupportScreen() {
               value={subject}
               onChangeText={setSubject}
               placeholder="What is your issue about?"
-              placeholderTextColor="#999"
+              placeholderTextColor={ShopFlareColors.textLight}
             />
           </View>
           <View style={styles.fieldGroup}>
@@ -165,7 +165,7 @@ export default function HelpSupportScreen() {
               value={message}
               onChangeText={setMessage}
               placeholder="Describe your issue in detail..."
-              placeholderTextColor="#999"
+              placeholderTextColor={ShopFlareColors.textLight}
               multiline
               numberOfLines={5}
             />
@@ -176,7 +176,7 @@ export default function HelpSupportScreen() {
             disabled={sending}
           >
             {sending ? (
-              <ActivityIndicator color="#FFF" />
+              <ActivityIndicator color={ShopFlareColors.secondary} />
             ) : (
               <ThemedText style={styles.sendButtonText}>Send Message</ThemedText>
             )}
@@ -185,7 +185,7 @@ export default function HelpSupportScreen() {
 
         {/* Footer info */}
         <View style={styles.footer}>
-          <Ionicons name="time-outline" size={16} color="#888" />
+          <Ionicons name="time-outline" size={16} color={ShopFlareColors.textSecondary} />
           <ThemedText style={styles.footerText}>
             Support hours: Mon–Fri, 9 AM – 6 PM (EST)
           </ThemedText>
@@ -197,20 +197,18 @@ export default function HelpSupportScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: ShopFlareColors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 56,
-    paddingBottom: 16,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: ShopFlareColors.primary,
   },
   backButton: { padding: 8 },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: ShopFlareColors.secondary },
   content: { padding: 16, paddingBottom: 60 },
   quickActions: {
     flexDirection: 'row',
@@ -219,13 +217,13 @@ const styles = StyleSheet.create({
   },
   quickBtn: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 14,
     padding: 14,
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: '#EEE',
+    borderColor: ShopFlareColors.borderLight,
   },
   quickIcon: {
     width: 44,
@@ -239,18 +237,18 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#888',
+    color: ShopFlareColors.textLight,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 10,
     marginLeft: 4,
   },
   faqList: {
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#EEE',
+    borderColor: ShopFlareColors.borderLight,
     marginBottom: 24,
   },
   faqItem: { padding: 16 },
@@ -258,30 +256,30 @@ const styles = StyleSheet.create({
   faqQuestion: { flex: 1, fontSize: 14, fontWeight: '600' },
   faqAnswer: {
     fontSize: 14,
-    color: '#555',
+    color: ShopFlareColors.textSecondary,
     lineHeight: 20,
     marginTop: 10,
   },
-  faqDivider: { height: 1, backgroundColor: '#F0F0F0' },
+  faqDivider: { height: 1, backgroundColor: ShopFlareColors.borderLight },
   contactCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#EEE',
+    borderColor: ShopFlareColors.borderLight,
     marginBottom: 16,
   },
   fieldGroup: { marginBottom: 14 },
-  label: { fontSize: 13, fontWeight: '600', color: '#444', marginBottom: 6 },
+  label: { fontSize: 13, fontWeight: '600', color: ShopFlareColors.textSecondary, marginBottom: 6 },
   input: {
     borderWidth: 1.5,
-    borderColor: '#E8E8E8',
+    borderColor: ShopFlareColors.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#1A1A1A',
-    backgroundColor: '#FAFAFA',
+    color: ShopFlareColors.text,
+    backgroundColor: ShopFlareColors.background,
   },
   textArea: { height: 100, textAlignVertical: 'top', paddingTop: 12 },
   sendButton: {
@@ -296,7 +294,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-  sendButtonText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+  sendButtonText: { color: ShopFlareColors.secondary, fontSize: 15, fontWeight: '700' },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -304,5 +302,5 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 8,
   },
-  footerText: { fontSize: 13, color: '#888' },
+  footerText: { fontSize: 13, color: ShopFlareColors.textLight },
 });

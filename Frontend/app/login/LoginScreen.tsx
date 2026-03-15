@@ -52,7 +52,7 @@ export default function LoginScreen({ onNavigateToRegister }: LoginScreenProps) 
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Ionicons name="bag" size={40} color="#FFF" />
+            <Ionicons name="bag" size={40} color={ShopFlareColors.primary} />
           </View>
           <Text style={styles.brandName}>ShopFlare</Text>
         </View>
@@ -98,7 +98,7 @@ export default function LoginScreen({ onNavigateToRegister }: LoginScreenProps) 
             disabled={isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={ShopFlareColors.secondary} />
             ) : (
               <Text style={styles.buttonText}>Sign In</Text>
             )}
@@ -126,7 +126,7 @@ export default function LoginScreen({ onNavigateToRegister }: LoginScreenProps) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: ShopFlareColors.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   brandName: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FFF',
+    color: ShopFlareColors.secondary,
   },
   innerContainer: {
     flex: 1,
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 12,
     marginBottom: 16,
     borderWidth: 1,
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: ShopFlareColors.secondary,
     fontSize: 16,
     fontWeight: '600',
   },

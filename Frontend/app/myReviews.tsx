@@ -23,7 +23,7 @@ function StarRating({ rating }: { rating: number }) {
           key={i}
           name={i <= rating ? 'star' : 'star-outline'}
           size={14}
-          color={i <= rating ? '#FFC107' : '#CCC'}
+          color={i <= rating ? ShopFlareColors.warning : ShopFlareColors.border}
         />
       ))}
     </View>
@@ -78,13 +78,13 @@ export default function MyReviewsScreen() {
       <View style={styles.cardTop}>
         <View style={styles.cardInfo}>
           <View style={styles.productRow}>
-            <Ionicons name="bag-outline" size={14} color="#888" />
+            <Ionicons name="bag-outline" size={14} color={ShopFlareColors.textSecondary} />
             <ThemedText style={styles.productId}>Product #{item.product}</ThemedText>
           </View>
           <StarRating rating={item.rating} />
         </View>
         <TouchableOpacity onPress={() => handleDelete(item)} style={styles.deleteBtn}>
-          <Ionicons name="trash-outline" size={18} color="#F44336" />
+          <Ionicons name="trash-outline" size={18} color={ShopFlareColors.error} />
         </TouchableOpacity>
       </View>
 
@@ -110,7 +110,7 @@ export default function MyReviewsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={ShopFlareColors.primary} />
+          <Ionicons name="arrow-back" size={24} color={ShopFlareColors.secondary} />
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle}>My Reviews</ThemedText>
         <View style={{ width: 40 }} />
@@ -120,7 +120,7 @@ export default function MyReviewsScreen() {
         <ActivityIndicator style={{ marginTop: 60 }} size="large" color={ShopFlareColors.primary} />
       ) : reviews.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="star-outline" size={64} color="#CCC" />
+          <Ionicons name="star-outline" size={64} color={ShopFlareColors.warning} />
           <ThemedText style={styles.emptyTitle}>No Reviews Yet</ThemedText>
           <ThemedText style={styles.emptySubtitle}>
             Your product reviews will appear here
@@ -145,27 +145,26 @@ export default function MyReviewsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: ShopFlareColors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 56,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: ShopFlareColors.primary,
   },
   backButton: { padding: 8 },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: ShopFlareColors.secondary },
   list: { padding: 16, gap: 12, paddingBottom: 40 },
-  countText: { fontSize: 13, color: '#888', marginBottom: 4 },
+  countText: { fontSize: 13, color: ShopFlareColors.textLight, marginBottom: 4 },
   card: {
-    backgroundColor: '#FAFAFA',
+    backgroundColor: ShopFlareColors.background,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#EEE',
+    borderColor: ShopFlareColors.borderLight,
   },
   cardTop: {
     flexDirection: 'row',
@@ -175,11 +174,11 @@ const styles = StyleSheet.create({
   },
   cardInfo: { flex: 1, gap: 6 },
   productRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  productId: { fontSize: 13, color: '#888' },
+  productId: { fontSize: 13, color: ShopFlareColors.textLight },
   deleteBtn: { padding: 4 },
   reviewTitle: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
-  reviewComment: { fontSize: 14, color: '#555', lineHeight: 20, marginBottom: 8 },
-  reviewDate: { fontSize: 12, color: '#999' },
+  reviewComment: { fontSize: 14, color: ShopFlareColors.textSecondary, lineHeight: 20, marginBottom: 8 },
+  reviewDate: { fontSize: 12, color: ShopFlareColors.textLight },
   emptyState: {
     flex: 1,
     alignItems: 'center',
@@ -187,5 +186,5 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   emptyTitle: { fontSize: 20, fontWeight: '700', marginTop: 16, marginBottom: 6 },
-  emptySubtitle: { fontSize: 14, color: '#777', textAlign: 'center' },
+  emptySubtitle: { fontSize: 14, color: ShopFlareColors.textSecondary, textAlign: 'center' },
 });
