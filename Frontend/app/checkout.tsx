@@ -264,7 +264,7 @@ export default function CheckoutScreen() {
             <ActivityIndicator color={ShopFlareColors.secondary} />
           ) : (
             <>
-              <Ionicons name="checkmark-circle" size={22} color={ShopFlareColors.primary} />
+              <Ionicons name="checkmark-circle" size={22} color={ShopFlareColors.secondary} />
               <ThemedText style={styles.placeOrderText}>Place Order</ThemedText>
             </>
           )}

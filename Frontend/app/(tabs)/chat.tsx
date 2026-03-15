@@ -716,7 +716,7 @@ const styles = StyleSheet.create({
   chatHeaderImage: {
     width: 42,
     height: 42,
-    borderRadius: 14,
+    borderRadius: 16,
     marginLeft: 12,
   },
   emptyMessages: {

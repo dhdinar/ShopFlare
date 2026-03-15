@@ -121,7 +121,7 @@ export default function WishlistScreen() {
                       handleAddToCart(item);
                     }}
                   >
-                    <Ionicons name="bag-add-outline" size={20} color={ShopFlareColors.primary} />
+                    <Ionicons name="bag-add-outline" size={20} color={ShopFlareColors.secondary} />
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={styles.removeButton} 

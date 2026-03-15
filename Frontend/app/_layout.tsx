@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { FashionProvider } from '@/context/FashionContext';
+import { ShopFlareColors } from '@/constants/theme';
 import { ActivityIndicator, View } from 'react-native';
 
 function RootLayoutNav() {
@@ -60,7 +61,7 @@ function RootLayoutNav() {
           )}
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>
-        <StatusBar style="auto" />
+        <StatusBar style="light" backgroundColor={ShopFlareColors.primary} translucent />
       </FashionProvider>
     </ThemeProvider>
   );

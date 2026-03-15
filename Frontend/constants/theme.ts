@@ -29,11 +29,13 @@ export const Colors = {
 
 // ShopFlare Brand Colors
 export const ShopFlareColors = {
-  primary: '#1A1A1A',
+  //primary: '#1A1A1A',
+  primary: '#FF6B35',
   primaryLight: '#444444',
   primaryDark: '#0D0D0D',
   secondary: '#FFFFFF',
   accent: '#FF6B35',       // Warm orange — the "flare" in ShopFlare
+  //accent: '#1A1A1A',        // Using primary as accent for a more cohesive look
   accentLight: '#FFF4EE',  // Accent tint for backgrounds / badges
   accentDark: '#E55A2B',   // Pressed state
   background: '#F8F9FA',

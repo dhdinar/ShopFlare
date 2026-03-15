@@ -172,7 +172,7 @@ export default function CartScreen() {
             </View>
             <TouchableOpacity style={styles.checkoutButton} onPress={() => router.push('/checkout')}>
               <ThemedText style={styles.checkoutButtonText}>Proceed to Checkout</ThemedText>
-              <Ionicons name="arrow-forward" size={20} color={ShopFlareColors.primary} />
+              <Ionicons name="arrow-forward" size={20} color={ShopFlareColors.secondary} />
             </TouchableOpacity>
           </View>
         </>

@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 40,
     paddingBottom: 20,
     backgroundColor: ShopFlareColors.primary,
   },
