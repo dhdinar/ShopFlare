@@ -1110,6 +1110,33 @@ def brand_analytics_view(request):
     total_reviews = review_stats['total'] or 0
     avg_rating = round(review_stats['avg_rating'] or 0, 1)
 
+    # Sales and order metrics (count only delivered orders as completed sales)
+    sold_items = OrderItem.objects.filter(brand=brand, order__status='delivered')
+    sales_stats = sold_items.aggregate(
+        total_sales=Sum('line_total'),
+        units_sold=Sum('quantity'),
+        total_orders=Count('order', distinct=True),
+    )
+    total_sales = sales_stats['total_sales'] or 0
+    units_sold = int(sales_stats['units_sold'] or 0)
+    total_orders = int(sales_stats['total_orders'] or 0)
+    avg_order_value = round((float(total_sales) / total_orders), 2) if total_orders else 0
+
+    top_selling_products = (
+        sold_items.values('product_id', 'product_name')
+        .annotate(units_sold=Sum('quantity'), revenue=Sum('line_total'))
+        .order_by('-units_sold')[:5]
+    )
+    top_selling_products_data = [
+        {
+            'id': p['product_id'],
+            'name': p['product_name'],
+            'units_sold': int(p['units_sold'] or 0),
+            'revenue': str(p['revenue'] or 0),
+        }
+        for p in top_selling_products
+    ]
+
     # Top 5 products by wishlist saves
     top_products = (
         products.filter(is_active=True)
@@ -1129,6 +1156,11 @@ def brand_analytics_view(request):
         'total_reviews': total_reviews,
         'average_rating': avg_rating,
         'top_products': top_products_data,
+        'total_sales': round(float(total_sales), 2),
+        'total_orders': total_orders,
+        'units_sold': units_sold,
+        'avg_order_value': avg_order_value,
+        'top_selling_products': top_selling_products_data,
     })
 
 

@@ -41,7 +41,12 @@ export interface BrandAnalytics {
   cart_adds: number;
   total_reviews: number;
   average_rating: number;
+  total_sales: number;
+  total_orders: number;
+  units_sold: number;
+  avg_order_value: number;
   top_products: { id: number; name: string; price: string; saves: number }[];
+  top_selling_products: { id: number | null; name: string; units_sold: number; revenue: string }[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

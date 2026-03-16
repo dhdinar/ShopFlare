@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: ShopFlareColors.background },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingTop: 60, paddingHorizontal: 20, paddingBottom: 20,
+    paddingTop: 40, paddingHorizontal: 20, paddingBottom: 20,
     backgroundColor: ShopFlareColors.primary,
   },
   backButton: { width: 40, height: 40, justifyContent: 'center' },

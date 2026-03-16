@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   },
   faqItem: { padding: 16 },
   faqHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  faqQuestion: { flex: 1, fontSize: 14, fontWeight: '600' },
+  faqQuestion: { flex: 1, fontSize: 14,color: ShopFlareColors.text, fontWeight: '600' },
   faqAnswer: {
     fontSize: 14,
     color: ShopFlareColors.textSecondary,

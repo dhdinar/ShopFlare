@@ -55,6 +55,8 @@ function RootLayoutNav() {
               <Stack.Screen name="orderDetail" />
               <Stack.Screen name="myReviews" />
               <Stack.Screen name="settings" />
+              <Stack.Screen name="changePassword" />
+              <Stack.Screen name="privacyControls" />
               <Stack.Screen name="helpSupport" />
               <Stack.Screen name="brandAnalytics" />
             </>

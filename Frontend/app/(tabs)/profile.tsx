@@ -92,6 +92,26 @@ export default function ProfileScreen() {
             <ThemedText style={styles.sectionSubtitle}>View sales and performance data</ThemedText>
           </TouchableOpacity>
 
+          <ThemedText style={styles.sectionGroupTitle}>Security</ThemedText>
+
+          <TouchableOpacity style={[styles.section, styles.securitySection]} onPress={() => router.push('/changePassword')}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="key-outline" size={24} color={ShopFlareColors.accent} />
+              <ThemedText style={styles.sectionTitle}>Change Password</ThemedText>
+              <Ionicons name="chevron-forward-outline" size={20} color={ShopFlareColors.textLight} />
+            </View>
+            <ThemedText style={styles.sectionSubtitle}>Update your password and keep your account safe</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.section, styles.securitySection]} onPress={() => router.push('/privacyControls')}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="shield-checkmark-outline" size={24} color={ShopFlareColors.accent} />
+              <ThemedText style={styles.sectionTitle}>Privacy & Controls</ThemedText>
+              <Ionicons name="chevron-forward-outline" size={20} color={ShopFlareColors.textLight} />
+            </View>
+            <ThemedText style={styles.sectionSubtitle}>Manage account and app security preferences</ThemedText>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.section} onPress={() => router.push('/helpSupport')}>
             <View style={styles.sectionHeader}>
               <Ionicons name="help-circle-outline" size={24} color={ShopFlareColors.primary} />
@@ -162,6 +182,26 @@ export default function ProfileScreen() {
           <ThemedText style={styles.sectionSubtitle}>Update your personal information</ThemedText>
         </TouchableOpacity>
 
+        <ThemedText style={styles.sectionGroupTitle}>Security</ThemedText>
+
+        <TouchableOpacity style={[styles.section, styles.securitySection]} onPress={() => router.push('/changePassword')}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="key-outline" size={24} color={ShopFlareColors.accent} />
+            <ThemedText style={styles.sectionTitle}>Change Password</ThemedText>
+            <Ionicons name="chevron-forward-outline" size={20} color={ShopFlareColors.textLight} />
+          </View>
+          <ThemedText style={styles.sectionSubtitle}>Reset your password on a dedicated security page</ThemedText>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.section, styles.securitySection]} onPress={() => router.push('/privacyControls')}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="shield-checkmark-outline" size={24} color={ShopFlareColors.accent} />
+            <ThemedText style={styles.sectionTitle}>Privacy & Controls</ThemedText>
+            <Ionicons name="chevron-forward-outline" size={20} color={ShopFlareColors.textLight} />
+          </View>
+          <ThemedText style={styles.sectionSubtitle}>Review login safety and app-level preferences</ThemedText>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.section} onPress={() => router.push('/settings')}>
           <View style={styles.sectionHeader}>
             <Ionicons name="settings-outline" size={24} color={ShopFlareColors.primary} />
@@ -181,7 +221,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color={ShopFlareColors.primary} />
+          <Ionicons name="log-out-outline" size={20} color={ShopFlareColors.secondary} />
           <ThemedText style={styles.logoutText}>Logout</ThemedText>
         </TouchableOpacity>
       </ScrollView>
@@ -253,6 +293,21 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   sectionTitle: { fontSize: 16, fontWeight: '600', flex: 1, color: ShopFlareColors.text },
   sectionSubtitle: { fontSize: 13, marginTop: 8, marginLeft: 38, color: ShopFlareColors.textSecondary },
+  sectionGroupTitle: {
+    marginHorizontal: 18,
+    marginTop: 14,
+    marginBottom: 6,
+    fontSize: 13,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: ShopFlareColors.textSecondary,
+    fontWeight: '700',
+  },
+  securitySection: {
+    borderWidth: 1,
+    borderColor: ShopFlareColors.accentLight,
+    backgroundColor: ShopFlareColors.secondary,
+  },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',

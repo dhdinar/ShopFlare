@@ -15,7 +15,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { ThemedText } from '@/components/themed-text';
 import { ShopFlareColors } from '@/constants/theme';
-import * as profileService from '@/services/profileService';
 
 export default function EditProfileScreen() {
   const { user, accessToken, updateProfile, updateBrandProfile } = useAuth();
@@ -31,17 +30,7 @@ export default function EditProfileScreen() {
   const [brandWebsite, setBrandWebsite] = useState(user?.brand_website || '');
   const [brandAddress, setBrandAddress] = useState(user?.brand_address || '');
 
-  // Password change fields
-  const [showPasswordSection, setShowPasswordSection] = useState(false);
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [newPassword2, setNewPassword2] = useState('');
-  const [showOld, setShowOld] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showNew2, setShowNew2] = useState(false);
-
   const [savingProfile, setSavingProfile] = useState(false);
-  const [savingPassword, setSavingPassword] = useState(false);
 
   const handleSaveProfile = async () => {
     if (!accessToken) return;
@@ -67,31 +56,6 @@ export default function EditProfileScreen() {
       Alert.alert('Error', e.message || 'Failed to update profile');
     } finally {
       setSavingProfile(false);
-    }
-  };
-
-  const handleChangePassword = async () => {
-    if (!accessToken) return;
-    if (!oldPassword || !newPassword || !newPassword2) {
-      Alert.alert('Error', 'Please fill in all password fields');
-      return;
-    }
-    setSavingPassword(true);
-    try {
-      if (isBrand) {
-        await profileService.changeBrandPassword(accessToken, oldPassword, newPassword, newPassword2);
-      } else {
-        await profileService.changePassword(accessToken, oldPassword, newPassword, newPassword2);
-      }
-      Alert.alert('Success', 'Password changed successfully');
-      setOldPassword('');
-      setNewPassword('');
-      setNewPassword2('');
-      setShowPasswordSection(false);
-    } catch (e: any) {
-      Alert.alert('Error', e.message || 'Failed to change password');
-    } finally {
-      setSavingPassword(false);
     }
   };
 
@@ -240,83 +204,6 @@ export default function EditProfileScreen() {
           )}
         </TouchableOpacity>
 
-        {/* Change Password Section */}
-        <TouchableOpacity
-          style={styles.passwordToggle}
-          onPress={() => setShowPasswordSection(!showPasswordSection)}
-        >
-          <Ionicons name="lock-closed-outline" size={20} color={ShopFlareColors.primary} />
-          <ThemedText style={styles.passwordToggleText}>Change Password</ThemedText>
-          <Ionicons
-            name={showPasswordSection ? 'chevron-up' : 'chevron-down'}
-            size={20}
-            color={ShopFlareColors.primary}
-          />
-        </TouchableOpacity>
-
-        {showPasswordSection && (
-          <View style={styles.passwordSection}>
-            <View style={styles.fieldGroup}>
-              <ThemedText style={styles.label}>Current Password</ThemedText>
-              <View style={styles.passwordInputWrapper}>
-                <TextInput
-                  style={[styles.input, styles.passwordInput]}
-                  value={oldPassword}
-                  onChangeText={setOldPassword}
-                  placeholder="Enter current password"
-                  placeholderTextColor={ShopFlareColors.textLight}
-                  secureTextEntry={!showOld}
-                />
-                <TouchableOpacity onPress={() => setShowOld(!showOld)} style={styles.eyeIcon}>
-                  <Ionicons name={showOld ? 'eye-off' : 'eye'} size={20} color={ShopFlareColors.textLight} />
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View style={styles.fieldGroup}>
-              <ThemedText style={styles.label}>New Password</ThemedText>
-              <View style={styles.passwordInputWrapper}>
-                <TextInput
-                  style={[styles.input, styles.passwordInput]}
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  placeholder="Enter new password"
-                  placeholderTextColor={ShopFlareColors.textLight}
-                  secureTextEntry={!showNew}
-                />
-                <TouchableOpacity onPress={() => setShowNew(!showNew)} style={styles.eyeIcon}>
-                  <Ionicons name={showNew ? 'eye-off' : 'eye'} size={20} color={ShopFlareColors.textLight} />
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View style={styles.fieldGroup}>
-              <ThemedText style={styles.label}>Confirm New Password</ThemedText>
-              <View style={styles.passwordInputWrapper}>
-                <TextInput
-                  style={[styles.input, styles.passwordInput]}
-                  value={newPassword2}
-                  onChangeText={setNewPassword2}
-                  placeholder="Confirm new password"
-                  placeholderTextColor={ShopFlareColors.textLight}
-                  secureTextEntry={!showNew2}
-                />
-                <TouchableOpacity onPress={() => setShowNew2(!showNew2)} style={styles.eyeIcon}>
-                  <Ionicons name={showNew2 ? 'eye-off' : 'eye'} size={20} color={ShopFlareColors.textLight} />
-                </TouchableOpacity>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={handleChangePassword}
-              disabled={savingPassword}
-            >
-              {savingPassword ? (
-                <ActivityIndicator color={ShopFlareColors.secondary} />
-              ) : (
-                <ThemedText style={styles.saveButtonText}>Update Password</ThemedText>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -381,15 +268,4 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   saveButtonText: { color: ShopFlareColors.secondary, fontSize: 16, fontWeight: '700' },
-  passwordToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 16,
-    backgroundColor: ShopFlareColors.background,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  passwordToggleText: { flex: 1, fontSize: 15, fontWeight: '600' },
-  passwordSection: { marginBottom: 16 },
 });
