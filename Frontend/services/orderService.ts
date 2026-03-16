@@ -128,6 +128,14 @@ export const getBrandOrders = async (token: string): Promise<Order[]> => {
   return handleResponse<Order[]>(res);
 };
 
+/** Get one order containing this brand's products */
+export const getBrandOrder = async (token: string, orderId: number): Promise<Order> => {
+  const res = await fetch(`${API_BASE_URL}/auth/brand/orders/${orderId}/`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse<Order>(res);
+};
+
 /** Update order status (brand only) */
 export const updateOrderStatus = async (
   token: string,

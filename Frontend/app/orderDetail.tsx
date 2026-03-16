@@ -6,7 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { getOrder, cancelOrder, Order } from '@/services/orderService';
+import { getOrder, getBrandOrder, cancelOrder, Order } from '@/services/orderService';
 
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -20,16 +20,24 @@ export default function OrderDetailScreen() {
 
   useEffect(() => {
     loadOrder();
-  }, []);
+  }, [accessToken, id, isBrand]);
 
   const loadOrder = async () => {
-    if (!accessToken || !id) return;
+    const orderId = Number(Array.isArray(id) ? id[0] : id);
+    if (!accessToken || !orderId || Number.isNaN(orderId)) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const data = await getOrder(accessToken, Number(id));
+      const data = isBrand
+        ? await getBrandOrder(accessToken, orderId)
+        : await getOrder(accessToken, orderId);
       setOrder(data);
-    } catch (err) {
-      console.error('Failed to load order:', err);
+    } catch (err: any) {
+      setOrder(null);
+      Alert.alert('Error', err?.message || 'Failed to load order details');
     } finally {
       setIsLoading(false);
     }

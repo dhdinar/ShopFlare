@@ -75,6 +75,7 @@ urlpatterns = [
 
     # Orders (brand)
     path('brand/orders/', views.brand_orders_view, name='brand_orders'),
+    path('brand/orders/<int:order_id>/', views.brand_order_detail_view, name='brand_order_detail'),
     path('brand/orders/<int:order_id>/status/', views.brand_order_status_update_view, name='brand_order_status'),
 
     # Health check

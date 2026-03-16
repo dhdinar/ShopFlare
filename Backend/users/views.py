@@ -1351,6 +1351,26 @@ def brand_orders_view(request):
     return Response(serializer.data)
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def brand_order_detail_view(request, order_id):
+    """Get details for one order that contains this brand's products"""
+    brand = get_brand_from_token(request)
+    if not brand:
+        return Response({'detail': 'Brand authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        order = (
+            Order.objects
+            .prefetch_related('items')
+            .get(id=order_id, items__brand=brand)
+        )
+    except Order.DoesNotExist:
+        return Response({'detail': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response(OrderSerializer(order).data)
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def brand_order_status_update_view(request, order_id):

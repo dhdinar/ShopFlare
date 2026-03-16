@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: ShopFlareColors.textLight,
+    color: ShopFlareColors.text,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginTop: 24,
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   settingText: { flex: 1 },
-  settingTitle: { fontSize: 15, fontWeight: '600' },
+  settingTitle: { fontSize: 15, color: ShopFlareColors.text, fontWeight: '600' },
   settingSubtitle: { fontSize: 12, color: ShopFlareColors.textLight, marginTop: 1 },
   divider: { height: 1, backgroundColor: ShopFlareColors.borderLight, marginLeft: 64 },
 });
