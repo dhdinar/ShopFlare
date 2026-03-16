@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address, Order, OrderItem
+from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address, Order, OrderItem, Notification
 
 User = get_user_model()
 
@@ -350,3 +350,21 @@ class OrderStatusUpdateSerializer(serializers.Serializer):
     status = serializers.ChoiceField(
         choices=['confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded']
     )
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    """Serializer for in-app notifications"""
+
+    class Meta:
+        model = Notification
+        fields = [
+            'id',
+            'notification_type',
+            'title',
+            'body',
+            'is_read',
+            'related_order',
+            'related_product',
+            'created_at',
+        ]
+        read_only_fields = fields

@@ -55,6 +55,12 @@ urlpatterns = [
     path('messages/send-to-brand/', views.send_message_to_brand_view, name='send_message_to_brand'),
     path('messages/conversations/', views.conversations_list_view, name='conversations_list'),
 
+    # Notifications
+    path('notifications/', views.notifications_list_view, name='notifications_list'),
+    path('notifications/unread-count/', views.notifications_unread_count_view, name='notifications_unread_count'),
+    path('notifications/read-all/', views.notifications_mark_all_read_view, name='notifications_read_all'),
+    path('notifications/<int:notification_id>/read/', views.notification_mark_read_view, name='notification_mark_read'),
+
     # Address endpoints
     path('addresses/', views.address_list_view, name='address_list'),
     path('addresses/create/', views.address_create_view, name='address_create'),

@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.79)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -362,6 +362,7 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 20,
     fontWeight: 'bold',
+    color: ShopFlareColors.text,
   },
   statLabel: {
     fontSize: 10,
@@ -420,6 +421,7 @@ const styles = StyleSheet.create({
   orderNumber: {
     fontSize: 16,
     fontWeight: '700',
+    color: ShopFlareColors.primary,
   },
   statusBadge: {
     paddingHorizontal: 10,
@@ -454,6 +456,7 @@ const styles = StyleSheet.create({
   orderTotal: {
     fontSize: 18,
     fontWeight: '700',
+    color: ShopFlareColors.text,
   },
   emptyContainer: {
     flex: 1,

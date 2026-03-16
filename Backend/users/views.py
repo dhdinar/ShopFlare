@@ -15,8 +15,9 @@ from .serializers import (UserSerializer, BrandSerializer, RegisterSerializer,
                           ProductImageSerializer, WishlistSerializer, CartItemSerializer,
                           ReviewSerializer, ReviewCreateSerializer,
                           MessageSerializer, AddressSerializer, ChangePasswordSerializer,
-                          OrderSerializer, CheckoutSerializer, OrderStatusUpdateSerializer)
-from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address, Order, OrderItem
+                          OrderSerializer, CheckoutSerializer, OrderStatusUpdateSerializer,
+                          NotificationSerializer)
+from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address, Order, OrderItem, Notification
 from .authentication import BrandUser
 
 User = get_user_model()
@@ -48,6 +49,66 @@ def get_brand_from_token(request):
     except Exception:
         pass
     return None
+
+
+def get_user_from_token(request):
+    """Extract customer user from JWT token"""
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return None
+
+    token = auth_header.split(' ')[1]
+    try:
+        from rest_framework_simplejwt.tokens import AccessToken
+        decoded = AccessToken(token)
+        user_id = decoded.get('user_id')
+        if user_id:
+            return User.objects.filter(id=user_id).first()
+    except Exception:
+        pass
+    return None
+
+
+def create_user_notification(user, title, body='', notification_type='system', related_order=None, related_product=None):
+    if not user:
+        return
+    Notification.objects.create(
+        recipient_user=user,
+        title=title,
+        body=body,
+        notification_type=notification_type,
+        related_order=related_order,
+        related_product=related_product,
+    )
+
+
+def create_brand_notification(brand, title, body='', notification_type='system', related_order=None, related_product=None):
+    if not brand:
+        return
+    Notification.objects.create(
+        recipient_brand=brand,
+        title=title,
+        body=body,
+        notification_type=notification_type,
+        related_order=related_order,
+        related_product=related_product,
+    )
+
+
+def resolve_notification_recipient(request):
+    """Resolve either authenticated customer or brand from token"""
+    if hasattr(request, 'user') and request.user and request.user.is_authenticated and not isinstance(request.user, BrandUser):
+        return request.user, None
+
+    brand = get_brand_from_token(request)
+    if brand:
+        return None, brand
+
+    user = get_user_from_token(request)
+    if user:
+        return user, None
+
+    return None, None
 
 
 def get_tokens_for_user(user):
@@ -977,7 +1038,72 @@ def send_message_to_brand_view(request):
         msg.sender_user = user
         msg.receiver_brand = brand
     msg.save()
+
+    if not is_brand:
+        create_brand_notification(
+            brand,
+            title=f'New message from {user.username}',
+            body=message_text[:180],
+            notification_type='message',
+            related_product=product,
+        )
+
     return Response(MessageSerializer(msg).data, status=201)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def notifications_list_view(request):
+    """List notifications for current customer/brand"""
+    user, brand = resolve_notification_recipient(request)
+    if not user and not brand:
+        return Response({'detail': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    qs = Notification.objects.filter(recipient_user=user) if user else Notification.objects.filter(recipient_brand=brand)
+    return Response(NotificationSerializer(qs, many=True).data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def notifications_unread_count_view(request):
+    """Get unread notifications count for current customer/brand"""
+    user, brand = resolve_notification_recipient(request)
+    if not user and not brand:
+        return Response({'detail': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    qs = Notification.objects.filter(recipient_user=user) if user else Notification.objects.filter(recipient_brand=brand)
+    return Response({'unread_count': qs.filter(is_read=False).count()})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def notification_mark_read_view(request, notification_id):
+    """Mark a single notification as read"""
+    user, brand = resolve_notification_recipient(request)
+    if not user and not brand:
+        return Response({'detail': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        notification = Notification.objects.get(id=notification_id, recipient_user=user) if user else Notification.objects.get(id=notification_id, recipient_brand=brand)
+    except Notification.DoesNotExist:
+        return Response({'detail': 'Notification not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    notification.is_read = True
+    notification.save(update_fields=['is_read'])
+    return Response(NotificationSerializer(notification).data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def notifications_mark_all_read_view(request):
+    """Mark all notifications as read"""
+    user, brand = resolve_notification_recipient(request)
+    if not user and not brand:
+        return Response({'detail': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    qs = Notification.objects.filter(recipient_user=user) if user else Notification.objects.filter(recipient_brand=brand)
+    updated = qs.filter(is_read=False).update(is_read=True)
+    return Response({'updated': updated})
 
 
 from django.http import HttpResponse
@@ -1276,6 +1402,24 @@ def checkout_view(request):
         # Clear the cart
         cart_items.delete()
 
+    create_user_notification(
+        request.user,
+        title=f'Order #{order.id} placed',
+        body='Your order has been placed successfully.',
+        notification_type='order',
+        related_order=order,
+    )
+
+    brand_ids = set(order.items.exclude(brand__isnull=True).values_list('brand_id', flat=True))
+    for brand in Brand.objects.filter(id__in=brand_ids):
+        create_brand_notification(
+            brand,
+            title=f'New order #{order.id}',
+            body='You received a new order containing your product(s).',
+            notification_type='order',
+            related_order=order,
+        )
+
     return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
 
@@ -1325,6 +1469,24 @@ def order_cancel_view(request, order_id):
 
         order.status = 'cancelled'
         order.save(update_fields=['status', 'updated_at'])
+
+    create_user_notification(
+        request.user,
+        title=f'Order #{order.id} cancelled',
+        body='Your order has been cancelled successfully.',
+        notification_type='order',
+        related_order=order,
+    )
+
+    brand_ids = set(order.items.exclude(brand__isnull=True).values_list('brand_id', flat=True))
+    for brand in Brand.objects.filter(id__in=brand_ids):
+        create_brand_notification(
+            brand,
+            title=f'Order #{order.id} cancelled',
+            body='A customer cancelled this order.',
+            notification_type='order',
+            related_order=order,
+        )
 
     return Response(OrderSerializer(order).data)
 
@@ -1389,4 +1551,13 @@ def brand_order_status_update_view(request, order_id):
     order = Order.objects.get(id=order_id)
     order.status = serializer.validated_data['status']
     order.save(update_fields=['status', 'updated_at'])
+
+    create_user_notification(
+        order.user,
+        title=f'Order #{order.id} update',
+        body=f'Your order status is now {order.status}.',
+        notification_type='order',
+        related_order=order,
+    )
+
     return Response(OrderSerializer(order).data)

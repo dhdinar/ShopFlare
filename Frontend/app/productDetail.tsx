@@ -326,7 +326,7 @@ export default function ProductDetailScreen() {
                     )}
                     <View style={styles.swipeHintTop}>
                       <ThemedText style={styles.swipeHintTextBold}>Swipe Left for Reviews</ThemedText>
-                      <Ionicons name="arrow-forward" size={14} color={ShopFlareColors.primary} />
+                      <Ionicons name="arrow-forward" size={14} color={ShopFlareColors.text} />
                     </View>
                   </View>
                   
@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 40,
+    paddingTop: 30,
     paddingBottom: 16,
     backgroundColor: ShopFlareColors.primary,
   },
@@ -720,7 +720,7 @@ const styles = StyleSheet.create({
   },
   brandName: {
     fontSize: 14,
-    color: ShopFlareColors.primary,
+    color: ShopFlareColors.textLight,
     fontWeight: '500',
   },
   category: {
@@ -735,7 +735,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: ShopFlareColors.primary,
+    color: ShopFlareColors.text,
   },
   originalPrice: {
     fontSize: 16,

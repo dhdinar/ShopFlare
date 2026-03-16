@@ -1,13 +1,16 @@
 import { StyleSheet, TouchableOpacity, View, ScrollView, TextInput, Dimensions, ActivityIndicator, Pressable, Alert, Platform, ToastAndroid } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useState, useEffect, useRef } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
 import { useFashion } from '@/context/FashionContext';
 import { FASHION_CATEGORIES, FASHION_SUBCATEGORIES, FILTER_CATEGORIES } from '@/constants/fashionData';
+import { useAuth } from '@/context/AuthContext';
+import { getUnreadNotificationsCount } from '@/services/notificationService';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 60;
@@ -39,21 +42,42 @@ const SPECIAL_OFFERS = [
 
 // Category emojis for products without images
 const CATEGORY_EMOJIS: Record<string, string> = {
-  'Men': '👔',
-  'Women': '👗',
-  'Children': '🧒',
+  'Men': '🧔',
+  'Women': '👩',
+  'Children': '🧸',
   'default': '🛍️',
 };
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { accessToken } = useAuth();
   const { products, isLoadingProducts, toggleWishlist, isInWishlist, addToCart } = useFashion();
   const [activeOfferIndex, setActiveOfferIndex] = useState(0);
   const [activeFilter, setActiveFilter] = useState('All');
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   const [countdown, setCountdown] = useState({ hours: 2, minutes: 12, seconds: 56 });
   const [searchQuery, setSearchQuery] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const loadUnreadNotifications = useCallback(async () => {
+    if (!accessToken) {
+      setUnreadCount(0);
+      return;
+    }
+    try {
+      const count = await getUnreadNotificationsCount(accessToken);
+      setUnreadCount(count);
+    } catch (e) {
+      setUnreadCount(0);
+    }
+  }, [accessToken]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadUnreadNotifications();
+    }, [loadUnreadNotifications])
+  );
 
   // Get subcategories for the active main category
   const currentSubcategories = activeFilter !== 'All' ? FASHION_SUBCATEGORIES[activeFilter] || [] : [];
@@ -171,9 +195,18 @@ export default function HomeScreen() {
                 <Ionicons name="chevron-down" size={16} color={ShopFlareColors.primary} />
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.notificationButton}>
+            <TouchableOpacity
+              style={styles.notificationButton}
+              onPress={() => router.push('/notifications')}
+            >
               <Ionicons name="notifications-outline" size={24} color={ShopFlareColors.secondary} />
-              <View style={styles.notificationBadge} />
+              {unreadCount > 0 && (
+                <View style={styles.notificationBadge}>
+                  <ThemedText style={styles.notificationBadgeText}>
+                    {unreadCount > 99 ? '99+' : String(unreadCount)}
+                  </ThemedText>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -466,14 +499,23 @@ const styles = StyleSheet.create({
   },
   notificationBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: ShopFlareColors.errorLight,
-    borderWidth: 2,
+    top: 2,
+    right: 2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: ShopFlareColors.error,
+    borderWidth: 1.5,
     borderColor: ShopFlareColors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  notificationBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: ShopFlareColors.secondary,
+    lineHeight: 12,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -610,14 +652,15 @@ const styles = StyleSheet.create({
   categoryGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    marginBottom: 0,
   },
   categoryItem: {
     alignItems: 'center',
   },
   categoryItemActive: {},
   categoryIcon: {
-    width: 64,
-    height: 64,
+    width: 60,
+    height: 60,
     borderRadius: 20,
     backgroundColor: ShopFlareColors.accentLight,
     justifyContent: 'center',
@@ -632,7 +675,7 @@ const styles = StyleSheet.create({
     backgroundColor: ShopFlareColors.accent,
   },
   categoryName: {
-    marginTop: 8,
+    marginTop: 6,
     fontSize: 12,
     color: ShopFlareColors.textSecondary,
     fontWeight: '500',

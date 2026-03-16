@@ -1,6 +1,19 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address
+from .models import (
+    CustomUser,
+    Brand,
+    Product,
+    ProductImage,
+    Wishlist,
+    CartItem,
+    Review,
+    Message,
+    Address,
+    Order,
+    OrderItem,
+    Notification,
+)
 
 
 @admin.register(CustomUser)
@@ -120,3 +133,71 @@ class AddressAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'full_name', 'address_line1', 'city', 'country']
     readonly_fields = ['created_at', 'updated_at']
     ordering = ['user', '-is_default', '-created_at']
+
+
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    extra = 0
+    readonly_fields = ['line_total']
+    autocomplete_fields = ['product', 'brand']
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = [
+        'id',
+        'user',
+        'status',
+        'payment_method',
+        'payment_status',
+        'total_amount',
+        'created_at',
+    ]
+    list_filter = ['status', 'payment_method', 'payment_status', 'created_at']
+    search_fields = [
+        'id',
+        'user__username',
+        'user__email',
+        'shipping_full_name',
+        'shipping_phone',
+    ]
+    readonly_fields = ['created_at', 'updated_at']
+    autocomplete_fields = ['user']
+    inlines = [OrderItemInline]
+    ordering = ['-created_at']
+
+
+@admin.register(OrderItem)
+class OrderItemAdmin(admin.ModelAdmin):
+    list_display = [
+        'id',
+        'order',
+        'product_name',
+        'brand',
+        'quantity',
+        'product_price',
+        'line_total',
+    ]
+    list_filter = ['brand', 'order__status', 'order__created_at']
+    search_fields = ['order__id', 'product_name', 'brand__username']
+    readonly_fields = ['line_total']
+    autocomplete_fields = ['order', 'product', 'brand']
+    ordering = ['-order__created_at', '-id']
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = [
+        'id',
+        'notification_type',
+        'title',
+        'recipient_user',
+        'recipient_brand',
+        'is_read',
+        'created_at',
+    ]
+    list_filter = ['notification_type', 'is_read', 'created_at']
+    search_fields = ['title', 'body', 'recipient_user__username', 'recipient_brand__username']
+    readonly_fields = ['created_at']
+    autocomplete_fields = ['recipient_user', 'recipient_brand', 'related_order', 'related_product']
+    ordering = ['-created_at']

@@ -312,3 +312,58 @@ class Review(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.product.name} ({self.rating} stars)"
+
+
+class Notification(models.Model):
+    """In-app notifications for customer and brand accounts"""
+    TYPE_CHOICES = [
+        ('order', 'Order'),
+        ('message', 'Message'),
+        ('system', 'System'),
+    ]
+
+    recipient_user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='notifications',
+    )
+    recipient_brand = models.ForeignKey(
+        Brand,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='notifications',
+    )
+    notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='system')
+    title = models.CharField(max_length=160)
+    body = models.TextField(blank=True, null=True)
+    is_read = models.BooleanField(default=False)
+
+    related_order = models.ForeignKey(
+        Order,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='notifications',
+    )
+    related_product = models.ForeignKey(
+        Product,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='notifications',
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'notifications'
+        verbose_name = 'Notification'
+        verbose_name_plural = 'Notifications'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        recipient = self.recipient_user or self.recipient_brand
+        return f"{recipient}: {self.title}"

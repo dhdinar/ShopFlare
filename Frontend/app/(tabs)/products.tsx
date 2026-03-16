@@ -34,6 +34,16 @@ export default function ProductsScreen() {
   
   const isBrand = user?.user_type === 'brand';
 
+  const getProductImage = (product: Product) => {
+    if (product.images && product.images.length > 0 && product.images[0].image_base64) {
+      return `data:${product.images[0].image_type};base64,${product.images[0].image_base64}`;
+    }
+    if (product.image) {
+      return product.image;
+    }
+    return null;
+  };
+
   const loadProducts = useCallback(async () => {
     if (!isBrand || !accessToken) return;
     
@@ -252,43 +262,57 @@ export default function ProductsScreen() {
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.productList}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
+          renderItem={({ item }) => {
+            const imageUrl = getProductImage(item);
+            const mainPrice = parseFloat(String(item.price || 0));
+            const discountedPrice = item.sale_price ? parseFloat(String(item.sale_price)) : null;
+            const hasValidDiscount = discountedPrice !== null && discountedPrice > 0 && discountedPrice < mainPrice;
+            return (
             <View style={styles.productCard}>
-              <View style={styles.productImagePlaceholder}>
-                {item.image ? (
-                  <Ionicons name="image" size={32} color={ShopFlareColors.primary} />
-                ) : (
-                  <Ionicons name="cube" size={32} color={ShopFlareColors.primary} />
-                )}
-              </View>
-              <View style={styles.productInfo}>
-                <ThemedText style={styles.productName}>{item.name}</ThemedText>
-                <ThemedText style={styles.productCategory}>{item.category || 'Uncategorized'}</ThemedText>
-                <View style={styles.priceRow}>
-                  <ThemedText style={styles.productPrice}>${parseFloat(String(item.price || 0)).toFixed(2)}</ThemedText>
-                  {item.sale_price && (
-                    <ThemedText style={styles.salePrice}>${parseFloat(String(item.sale_price)).toFixed(2)}</ThemedText>
+              <TouchableOpacity
+                style={styles.productMainPress}
+                onPress={() => router.push(`/productDetail?id=${item.id}`)}
+                activeOpacity={0.88}
+              >
+                <View style={styles.productImagePlaceholder}>
+                  {imageUrl ? (
+                    <Image source={imageUrl} style={styles.productImage} contentFit="cover" />
+                  ) : (
+                    <Ionicons name="cube" size={32} color={ShopFlareColors.primary} />
                   )}
                 </View>
-                <View style={styles.stockRow}>
-                  <View style={[styles.stockBadge, item.stock > 0 ? styles.inStock : styles.outOfStock]}>
-                    <Text style={styles.stockText}>{item.stock > 0 ? `${item.stock} in stock` : 'Out of stock'}</Text>
+                <View style={styles.productInfo}>
+                  <ThemedText style={styles.productName}>{item.name}</ThemedText>
+                  <ThemedText style={styles.productCategory}>{item.category || 'Uncategorized'}</ThemedText>
+                  <View style={styles.priceRow}>
+                    <ThemedText style={styles.productPrice}>
+                      ${hasValidDiscount ? discountedPrice!.toFixed(2) : mainPrice.toFixed(2)}
+                    </ThemedText>
+                    {hasValidDiscount && (
+                      <ThemedText style={styles.salePrice}>${mainPrice.toFixed(2)}</ThemedText>
+                    )}
                   </View>
-                  {!item.is_active && (
-                    <View style={styles.inactiveBadge}>
-                      <Text style={styles.inactiveText}>Inactive</Text>
+                  <View style={styles.stockRow}>
+                    <View style={[styles.stockBadge, item.stock > 0 ? styles.inStock : styles.outOfStock]}>
+                      <Text style={styles.stockText}>{item.stock > 0 ? `${item.stock} in stock` : 'Out of stock'}</Text>
                     </View>
-                  )}
+                    {!item.is_active && (
+                      <View style={styles.inactiveBadge}>
+                        <Text style={styles.inactiveText}>Inactive</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
-              </View>
+              </TouchableOpacity>
+
               <View style={styles.productActions}>
-                <TouchableOpacity 
-                  style={styles.actionBtn} 
+                <TouchableOpacity
+                  style={styles.actionBtn}
                   onPress={() => openEditProduct(item)}
                 >
                   <Ionicons name="pencil" size={20} color={ShopFlareColors.warning} />
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.actionBtn, styles.deleteBtn]}
                   onPress={() => handleDeleteProduct(item)}
                 >
@@ -296,7 +320,8 @@ export default function ProductsScreen() {
                 </TouchableOpacity>
               </View>
             </View>
-          )}
+            );
+          }}
         />
       )}
 
@@ -462,7 +487,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 40,
     paddingBottom: 20,
     backgroundColor: ShopFlareColors.primary,
   },
@@ -507,6 +532,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   statNumber: {
+    color: ShopFlareColors.text,
     fontSize: 24,
     fontWeight: 'bold',
   },
@@ -531,6 +557,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  productMainPress: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   productImagePlaceholder: {
     width: 80,
     height: 80,
@@ -538,6 +569,12 @@ const styles = StyleSheet.create({
     backgroundColor: ShopFlareColors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  productImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: ShopFlareColors.borderLight,
   },
   productInfo: {
     flex: 1,
@@ -547,6 +584,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 16,
     fontWeight: '600',
+    color: ShopFlareColors.text,
     marginBottom: 4,
   },
   productCategory: {
@@ -563,6 +601,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 16,
     fontWeight: '700',
+    color: ShopFlareColors.text,
   },
   salePrice: {
     fontSize: 14,
@@ -588,6 +627,7 @@ const styles = StyleSheet.create({
   stockText: {
     fontSize: 11,
     fontWeight: '500',
+    color: ShopFlareColors.text,
   },
   inactiveBadge: {
     paddingHorizontal: 8,
