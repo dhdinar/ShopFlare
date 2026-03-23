@@ -9,6 +9,7 @@ import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { getConversations, getProductMessages, getProductMessagesWithUser, sendMessage, sendMessageToUser, Conversation, Message } from '@/services/messageService';
 import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CHAT_POLL_INTERVAL_MS = 3000;
 
@@ -16,6 +17,7 @@ export default function ChatScreen() {
   const { accessToken, isSignedIn, user } = useAuth();
   const router = useRouter();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ productId?: string; brandName?: string; productName?: string; reviewerUsername?: string }>();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,6 +29,7 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [messageText, setMessageText] = useState('');
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [inputBarHeight, setInputBarHeight] = useState(68);
   const deepLinkHandled = useRef<string | null>(null);
   const messageListRef = useRef<FlatList<Message>>(null);
@@ -216,10 +219,12 @@ export default function ChatScreen() {
     if (!activeChat) return;
 
     const handleKeyboardShow = () => {
+      setIsKeyboardVisible(true);
       scrollMessagesToBottom(false, Platform.OS === 'ios' ? 40 : 20);
     };
 
     const handleKeyboardHide = () => {
+      setIsKeyboardVisible(false);
       scrollMessagesToBottom(false, Platform.OS === 'ios' ? 70 : 35);
     };
 
@@ -234,6 +239,12 @@ export default function ChatScreen() {
       hideSub.remove();
     };
   }, [activeChat, scrollMessagesToBottom]);
+
+  useEffect(() => {
+    if (!activeChat) {
+      setIsKeyboardVisible(false);
+    }
+  }, [activeChat]);
 
   useEffect(() => {
     const parentNavigation = navigation.getParent();
@@ -325,8 +336,9 @@ export default function ChatScreen() {
       <ThemedView style={styles.container}>
         <KeyboardAvoidingView
           style={styles.chatDetailWrapper}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+          enabled
         >
           {/* Chat Header */}
           <View style={styles.chatDetailHeader}>
@@ -366,7 +378,7 @@ export default function ChatScreen() {
               renderItem={renderMessage}
               keyExtractor={item => item.id.toString()}
               contentContainerStyle={styles.messagesList}
-              ListFooterComponent={<View style={{ height: Math.max(8, Math.round(inputBarHeight * 0.16)) }} />}
+              ListFooterComponent={<View style={{ height: Math.max(8, Math.round(inputBarHeight * 0.16)) + (isKeyboardVisible ? 0 : Math.max(insets.bottom, 0)) }} />}
               showsVerticalScrollIndicator={false}
               onContentSizeChange={() => scrollMessagesToBottom(false)}
               keyboardShouldPersistTaps="handled"
@@ -376,7 +388,7 @@ export default function ChatScreen() {
 
           {/* Input */}
           <View
-            style={styles.inputBar}
+            style={[styles.inputBar, { paddingBottom: isKeyboardVisible ? 12 : Math.max(12, insets.bottom) }]}
             onLayout={(event) => {
               const nextHeight = Math.ceil(event.nativeEvent.layout.height);
               if (nextHeight !== inputBarHeight) {
