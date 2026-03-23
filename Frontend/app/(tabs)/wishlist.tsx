@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   },
   brandName: {
     fontSize: 12,
-    color: ShopFlareColors.primary,
+    color: ShopFlareColors.textLight,
     marginTop: 2,
   },
   ratingRow: {

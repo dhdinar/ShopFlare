@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     backgroundColor: ShopFlareColors.secondary,
-    padding: 12,
+    padding: 10,
     borderRadius: 12,
     alignItems: 'center',
     shadowColor: '#000',
@@ -350,6 +350,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    marginTop: -8,
   },
   statIcon: {
     width: 36,
@@ -371,12 +372,14 @@ const styles = StyleSheet.create({
   },
   filterContainer: {
     backgroundColor: ShopFlareColors.secondary,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: ShopFlareColors.borderLight,
+    marginTop: -10,
+    marginBottom : -2,
   },
   filterList: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     gap: 8,
   },
   filterButton: {

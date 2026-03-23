@@ -213,11 +213,11 @@ export default function HomeScreen() {
           {/* Search Bar */}
           <View style={styles.searchContainer}>
             <View style={styles.searchBar}>
-                <Ionicons name="search-outline" size={20} color="rgba(255,255,255,0.6)" />
+                <Ionicons name="search-outline" size={20} color={ShopFlareColors.text} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search products…"
-                placeholderTextColor="rgba(255,255,255,0.5)"
+                placeholderTextColor={ShopFlareColors.text}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
@@ -526,10 +526,11 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.11)',
+    //backgroundColor: 'rgba(255, 255, 255, 0.11)',
+    backgroundColor: ShopFlareColors.secondary,
     borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 7,
   },
   searchInput: {
     flex: 1,

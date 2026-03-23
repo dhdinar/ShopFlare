@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 60,
+    paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 20,
     backgroundColor: ShopFlareColors.primary,
@@ -691,9 +691,9 @@ const styles = StyleSheet.create({
   chatDetailHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 30,
+    paddingTop: 27,
     paddingHorizontal: 20,
-    paddingBottom: 14,
+    paddingBottom: 8,
     backgroundColor: ShopFlareColors.primary,
   },
   backBtn: {

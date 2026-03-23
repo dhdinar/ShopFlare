@@ -233,8 +233,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: ShopFlareColors.background },
   scrollContent: { paddingBottom: 40 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
-  emptyTitle: { fontSize: 24, fontWeight: 'bold', marginTop: 16, marginBottom: 8, textAlign: 'center' },
-  emptyMessage: { fontSize: 16, textAlign: 'center', marginBottom: 32, opacity: 0.6 },
+  emptyTitle: { color: ShopFlareColors.text, fontSize: 24, fontWeight: 'bold', marginTop: 16, marginBottom: 8, textAlign: 'center' },
+  emptyMessage: { color: ShopFlareColors.textSecondary, fontSize: 16, textAlign: 'center', marginBottom: 32, opacity: 0.6 },
   loginButton: {
     backgroundColor: ShopFlareColors.accent,
     paddingVertical: 14,

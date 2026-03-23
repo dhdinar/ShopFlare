@@ -729,6 +729,7 @@ const styles = StyleSheet.create({
     color: ShopFlareColors.textSecondary,
   },
   modalTitle: {
+    color: ShopFlareColors.text,
     fontSize: 18,
     fontWeight: '600',
   },
