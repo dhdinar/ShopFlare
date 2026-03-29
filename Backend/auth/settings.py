@@ -131,37 +131,18 @@ WSGI_APPLICATION = 'auth.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 # Database configuration
-# Use USE_SQLITE=true for local fallback, otherwise DATABASE_URL (Render), else local MySQL.
-if os.environ.get('USE_SQLITE', 'false').lower() == 'true':
+# Use DATABASE_URL (PostgreSQL) when available, otherwise fallback to local MySQL.
+if os.environ.get('DATABASE_URL'):
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-elif os.environ.get('DATABASE_URL'):
-    # DATABASES = {
-    #     'default': dj_database_url.config(
-    #         default=os.environ.get('DATABASE_URL'),
-    #         conn_max_age=600,
-    #         conn_health_checks=True,
-    #     )
-    # }
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('DB_NAME'),
-            'USER': os.environ.get('DB_USER'),
-            'PASSWORD': os.environ.get('DB_PASSWORD'),
-            'HOST': os.environ.get('DB_HOST'),
-            'PORT': os.environ.get('DB_PORT'),
-            'OPTIONS': {
-                'sslmode': 'require',
-            },
-        }
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL'),
+            conn_max_age=600,
+            conn_health_checks=True,
+            ssl_require=True,
+        )
     }
 else:
-    # Local development - use MySQL or SQLite
+    # Local development fallback (MySQL)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
