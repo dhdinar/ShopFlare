@@ -13,7 +13,7 @@ services:
     rootDir: Backend
     buildCommand: "./build.sh"
     preDeployCommand: "python manage.py migrate --noinput"
-    startCommand: "gunicorn auth.wsgi:application"
+    startCommand: "gunicorn auth.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 120 --log-file -"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
