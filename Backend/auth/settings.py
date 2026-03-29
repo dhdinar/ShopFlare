@@ -133,12 +133,25 @@ WSGI_APPLICATION = 'auth.wsgi.application'
 # Database configuration
 # Use DATABASE_URL from environment (Render.com provides this)
 if os.environ.get('DATABASE_URL'):
+    # DATABASES = {
+    #     'default': dj_database_url.config(
+    #         default=os.environ.get('DATABASE_URL'),
+    #         conn_max_age=600,
+    #         conn_health_checks=True,
+    #     )
+    # }
     DATABASES = {
-        'default': dj_database_url.config(
-            default=os.environ.get('DATABASE_URL'),
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'postgres',
+            'USER': 'postgres',
+            'PASSWORD': 'DataForge1234',
+            'HOST': 'db.dwkkqezbsupayuskgdqo.supabase.co',
+            'PORT': '5432',
+            'OPTIONS': {
+                'sslmode': 'require',
+            },
+        }
     }
 else:
     # Local development - use MySQL or SQLite
