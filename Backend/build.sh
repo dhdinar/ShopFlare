@@ -5,11 +5,14 @@ set -o errexit
 # Install dependencies
 pip install -r requirements.txt
 
+# Print migration plan for visibility in deploy logs
+python manage.py showmigrations
+
 # Collect static files
 python manage.py collectstatic --no-input
 
 # Run migrations
-python manage.py migrate
+python manage.py migrate --noinput --verbosity 2
 
 # Create superuser if it doesn't exist
 python manage.py shell << EOF

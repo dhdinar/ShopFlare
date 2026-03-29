@@ -12,6 +12,7 @@ services:
     runtime: python
     rootDir: Backend
     buildCommand: "./build.sh"
+    preDeployCommand: "python manage.py migrate --noinput"
     startCommand: "gunicorn auth.wsgi:application"
     envVars:
       - key: DATABASE_URL
