@@ -40,8 +40,13 @@ export async function getConversations(token: string): Promise<Conversation[]> {
   return response.json();
 }
 
-export async function getProductMessages(token: string, productId: number): Promise<Message[]> {
-  const response = await fetch(`${API_BASE_URL}/auth/products/${productId}/messages/`, {
+export async function getProductMessages(
+  token: string,
+  productId: number,
+  chatWith?: string
+): Promise<Message[]> {
+  const query = chatWith ? `?chat_with=${encodeURIComponent(chatWith)}` : '';
+  const response = await fetch(`${API_BASE_URL}/auth/products/${productId}/messages/${query}`, {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,

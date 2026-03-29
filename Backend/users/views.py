@@ -769,6 +769,7 @@ def user_reviews_view(request):
 def product_messages_view(request, product_id):
     """Get all messages for a product between the current user/brand and the other party"""
     from django.db.models import Q
+    from .models import CustomUser
 
     product = Product.objects.filter(id=product_id).first()
     if not product:
@@ -778,43 +779,64 @@ def product_messages_view(request, product_id):
     is_brand = isinstance(user, BrandUser)
     brand = user.brand if is_brand else None
 
-    # Optional: filter by chat partner for user-to-user chats
-    chat_with = request.query_params.get('chat_with')  # username of the other party
+    # Optional: filter by explicit chat partner username
+    chat_with = request.query_params.get('chat_with')
     
     if is_brand:
-        messages = Message.objects.filter(
-            Q(product=product) & (Q(sender_brand=brand) | Q(receiver_brand=brand))
-        ).order_by('timestamp')
+        if chat_with:
+            other_user = CustomUser.objects.filter(username=chat_with).first()
+            if not other_user:
+                return Response({'detail': 'User not found'}, status=404)
+
+            messages = Message.objects.filter(
+                Q(product=product) & (
+                    (Q(sender_brand=brand) & Q(receiver_user=other_user)) |
+                    (Q(sender_user=other_user) & Q(receiver_brand=brand))
+                )
+            ).order_by('timestamp')
+        else:
+            messages = Message.objects.filter(
+                Q(product=product) & (Q(sender_brand=brand) | Q(receiver_brand=brand))
+            ).order_by('timestamp')
+
         Message.objects.filter(
             id__in=messages.values_list('id', flat=True),
             receiver_brand=brand,
             is_read=False,
         ).update(is_read=True)
     elif chat_with:
-        # User-to-user chat: show messages between current user and the specified user on this product
-        from .models import CustomUser
-        other_user = CustomUser.objects.filter(username=chat_with).first()
-        if not other_user:
-            return Response({'detail': 'User not found'}, status=404)
-        messages = Message.objects.filter(
-            Q(product=product) & (
-                (Q(sender_user=user) & Q(receiver_user=other_user)) |
-                (Q(sender_user=other_user) & Q(receiver_user=user))
-            )
-        ).order_by('timestamp')
+        # User requesting explicit conversation: either with product brand or with another user
+        if chat_with == product.brand.username:
+            messages = Message.objects.filter(
+                Q(product=product) & (
+                    (Q(sender_user=user) & Q(receiver_brand=product.brand)) |
+                    (Q(sender_brand=product.brand) & Q(receiver_user=user))
+                )
+            ).order_by('timestamp')
+        else:
+            other_user = CustomUser.objects.filter(username=chat_with).first()
+            if not other_user:
+                return Response({'detail': 'User not found'}, status=404)
+            messages = Message.objects.filter(
+                Q(product=product) & (
+                    (Q(sender_user=user) & Q(receiver_user=other_user)) |
+                    (Q(sender_user=other_user) & Q(receiver_user=user))
+                )
+            ).order_by('timestamp')
+
         Message.objects.filter(
             id__in=messages.values_list('id', flat=True),
             receiver_user=user,
             is_read=False,
         ).update(is_read=True)
     else:
-        # Customer sees messages they sent/received on this product
+        # Default customer view is only their brand conversation for this product
         messages = Message.objects.filter(
             Q(product=product) & (
-                Q(sender_user=user) | Q(receiver_user=user) |
-                (Q(is_from_brand=True) & Q(product__messages__sender_user=user))
+                (Q(sender_user=user) & Q(receiver_brand=product.brand)) |
+                (Q(sender_brand=product.brand) & Q(receiver_user=user))
             )
-        ).distinct().order_by('timestamp')
+        ).order_by('timestamp')
         Message.objects.filter(
             id__in=messages.values_list('id', flat=True),
             receiver_user=user,
@@ -828,6 +850,8 @@ def product_messages_view(request, product_id):
 @permission_classes([IsAuthenticated])
 def send_message_view(request):
     """Send a message for a product chat (customer-to-brand or user-to-user)"""
+    from django.db.models import Q
+
     data = request.data
     product_id = data.get('product') or data.get('product_id')
     message_text = data.get('message')
@@ -841,32 +865,56 @@ def send_message_view(request):
     product = Product.objects.filter(id=product_id).first()
     if not product:
         return Response({'detail': 'Product not found'}, status=404)
+
+    from .models import CustomUser
+
+    receiver_user = None
+    if receiver_username:
+        receiver_user = CustomUser.objects.filter(username=receiver_username).first()
+        if not receiver_user:
+            return Response({'detail': 'Receiver not found'}, status=404)
+
     user = request.user
     is_brand = isinstance(user, BrandUser)
     msg = Message(product=product, message=message_text)
 
-    if receiver_username and not is_brand:
-        # User-to-user message
-        from .models import CustomUser
-        receiver = CustomUser.objects.filter(username=receiver_username).first()
-        if not receiver:
-            return Response({'detail': 'Receiver not found'}, status=404)
-        msg.sender_user = user
-        msg.receiver_user = receiver
-        msg.is_from_brand = False
-    elif is_brand:
+    if is_brand:
         msg.sender_brand = user.brand
-        # Find the user who started this conversation
-        first_msg = Message.objects.filter(
-            product=product, is_from_brand=False
-        ).order_by('timestamp').first()
-        if first_msg and first_msg.sender_user:
-            msg.receiver_user = first_msg.sender_user
+
+        if receiver_user:
+            msg.receiver_user = receiver_user
+        else:
+            # Fallback for older clients: infer target user only when exactly one participant exists.
+            participant_ids = set()
+            for sender_id, receiver_id in Message.objects.filter(
+                product=product
+            ).filter(
+                Q(sender_brand=user.brand) | Q(receiver_brand=user.brand)
+            ).values_list('sender_user_id', 'receiver_user_id'):
+                if sender_id:
+                    participant_ids.add(sender_id)
+                if receiver_id:
+                    participant_ids.add(receiver_id)
+
+            if len(participant_ids) == 1:
+                msg.receiver_user = CustomUser.objects.filter(id=next(iter(participant_ids))).first()
+            else:
+                return Response(
+                    {'detail': 'receiver_username is required for brand messages in multi-user product chats'},
+                    status=400,
+                )
+
         msg.is_from_brand = True
+    elif receiver_user:
+        # User-to-user message
+        msg.sender_user = user
+        msg.receiver_user = receiver_user
+        msg.is_from_brand = False
     else:
         msg.sender_user = user
         msg.receiver_brand = product.brand
         msg.is_from_brand = False
+
     msg.save()
     return Response(MessageSerializer(msg).data, status=201)
 
@@ -892,17 +940,6 @@ def conversations_list_view(request):
             Q(sender_user=user) | Q(receiver_user=user)
         ).select_related('product', 'product__brand', 'sender_user', 'sender_brand', 'receiver_user', 'receiver_brand'
         ).order_by('-timestamp')
-
-        # Also include brand replies on products where user has sent a message
-        user_product_ids = Message.objects.filter(sender_user=user).values_list('product_id', flat=True).distinct()
-        brand_replies = Message.objects.filter(
-            product_id__in=user_product_ids, is_from_brand=True
-        ).select_related('product', 'product__brand', 'sender_user', 'sender_brand', 'receiver_user', 'receiver_brand'
-        ).order_by('-timestamp')
-
-        msgs_list = list(msgs) + [m for m in brand_replies if m.id not in {x.id for x in msgs}]
-        msgs_list.sort(key=lambda m: m.timestamp, reverse=True)
-        msgs = msgs_list
 
     # Group by product + chat partner (to separate brand chats from user-to-user chats)
     unread_counts = {}

@@ -88,7 +88,11 @@ export default function ChatScreen() {
       return getProductMessagesWithUser(accessToken, conv.product_id, conv.other_party_name);
     }
 
-    return getProductMessages(accessToken, conv.product_id);
+    const chatPartner = conv.other_party_name && conv.other_party_name !== 'Customer'
+      ? conv.other_party_name
+      : undefined;
+
+    return getProductMessages(accessToken, conv.product_id, chatPartner);
   }, [accessToken]);
 
   // Handle deep link: open chat for a specific product (only once per productId)
@@ -263,7 +267,7 @@ export default function ChatScreen() {
     if (!messageText.trim() || !activeChat || !accessToken) return;
     try {
       let sentMessage: Message;
-      if (activeChat.chat_type === 'user') {
+      if (activeChat.chat_type === 'user' || user?.user_type === 'brand') {
         sentMessage = await sendMessageToUser(accessToken, activeChat.product_id, activeChat.other_party_name, messageText.trim());
       } else {
         sentMessage = await sendMessage(accessToken, activeChat.product_id, messageText.trim());
