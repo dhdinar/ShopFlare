@@ -5,6 +5,16 @@ set -o errexit
 # Install dependencies
 pip install -r requirements.txt
 
+# Fail early if database is not reachable with current env configuration.
+python manage.py shell << EOF
+from django.db import connection
+
+with connection.cursor() as cursor:
+    cursor.execute('SELECT 1')
+
+print('Database connection OK')
+EOF
+
 # Print migration plan for visibility in deploy logs
 python manage.py showmigrations
 

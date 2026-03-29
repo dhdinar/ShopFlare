@@ -8,17 +8,9 @@ services:
     rootDir: Backend
     buildCommand: "./build.sh"
     preDeployCommand: "python manage.py migrate --noinput"
-    startCommand: "gunicorn auth.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 120 --log-file -"
+    startCommand: "python manage.py migrate --noinput ; gunicorn auth.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 120 --log-file -"
     envVars:
-      - key: DB_HOST
-        value: "db.dwkkqezbsupayuskgdqo.supabase.co"
-      - key: DB_PORT
-        value: "5432"
-      - key: DB_NAME
-        value: "postgres"
-      - key: DB_USER
-        value: "postgres"
-      - key: DB_PASSWORD
+      - key: DATABASE_URL
         sync: false
       - key: SECRET_KEY
         generateValue: true
