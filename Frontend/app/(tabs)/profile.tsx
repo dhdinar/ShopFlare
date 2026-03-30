@@ -1,14 +1,16 @@
-import { StyleSheet, Text, View, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, ScrollView, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
+import { useState, useCallback } from 'react';
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, checkAuthStatus } = useAuth();
   const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
 
   const isBrand = user?.user_type === 'brand';
 
@@ -28,6 +30,15 @@ export default function ProfileScreen() {
       },
     ]);
   };
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await checkAuthStatus();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [checkAuthStatus]);
 
   if (!user) {
     return (
@@ -52,13 +63,23 @@ export default function ProfileScreen() {
   if (isBrand) {
     return (
       <ThemedView style={styles.container}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={ShopFlareColors.primary}
+              colors={[ShopFlareColors.primary]}
+            />
+          }
+        >
           <View style={styles.brandHeader}>
             <View style={styles.brandAvatar}>
               <Ionicons name="storefront" size={36} color={ShopFlareColors.primary} />
             </View>
             <ThemedText style={styles.brandName}>{user?.username}</ThemedText>
-            <ThemedText style={styles.email}>{user?.email}</ThemedText>
             <View style={styles.brandBadge}>
               <Ionicons name="checkmark-circle" size={14} color={ShopFlareColors.success} />
               <Text style={styles.brandBadgeText}>Brand Account</Text>
@@ -132,13 +153,23 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={ShopFlareColors.primary}
+            colors={[ShopFlareColors.primary]}
+          />
+        }
+      >
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{user?.username?.charAt(0).toUpperCase() ?? '?'}</Text>
           </View>
           <ThemedText style={styles.username}>{user?.username}</ThemedText>
-          <ThemedText style={styles.email}>{user?.email}</ThemedText>
           {(user?.first_name || user?.last_name) && (
             <ThemedText style={styles.fullName}>
               {[user.first_name, user.last_name].filter(Boolean).join(' ')}
@@ -273,7 +304,7 @@ const styles = StyleSheet.create({
     borderColor: ShopFlareColors.accent,
   },
   avatarText: { fontSize: 32, fontWeight: 'bold', color: ShopFlareColors.accent },
-  username: { fontSize: 24, fontWeight: 'bold', marginBottom: 4 },
+  username: { fontSize: 24, fontWeight: 'bold', marginBottom: 4, color: ShopFlareColors.text },
   email: { fontSize: 14, opacity: 0.85 },
   fullName: { fontSize: 15, color: ShopFlareColors.textSecondary, marginTop: 4 },
   section: {
@@ -344,7 +375,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: ShopFlareColors.accent,
   },
-  brandName: { fontSize: 24, fontWeight: 'bold', marginBottom: 4 },
+  brandName: { fontSize: 24, fontWeight: 'bold', marginBottom: 4, color: ShopFlareColors.text },
   brandBadge: {
     flexDirection: 'row',
     alignItems: 'center',

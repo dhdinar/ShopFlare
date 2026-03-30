@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TouchableOpacity, Alert, ScrollView, TextInput, Modal, FlatList, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, ScrollView, TextInput, Modal, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
@@ -18,6 +18,7 @@ export default function ProductsScreen() {
   // Product management state
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   
@@ -57,6 +58,15 @@ export default function ProductsScreen() {
       setIsLoading(false);
     }
   }, [isBrand, accessToken]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadProducts();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadProducts]);
 
   useEffect(() => {
     if (isBrand) {
@@ -260,6 +270,14 @@ export default function ProductsScreen() {
         <FlatList
           data={products}
           keyExtractor={(item) => item.id.toString()}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={ShopFlareColors.primary}
+              colors={[ShopFlareColors.primary]}
+            />
+          }
           contentContainerStyle={styles.productList}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {

@@ -1,4 +1,4 @@
-import { StyleSheet, TouchableOpacity, View, ScrollView, TextInput, Dimensions, ActivityIndicator, Pressable, Alert, Platform, ToastAndroid } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, ScrollView, TextInput, Dimensions, ActivityIndicator, Pressable, Alert, Platform, ToastAndroid, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -51,13 +51,14 @@ const CATEGORY_EMOJIS: Record<string, string> = {
 export default function HomeScreen() {
   const router = useRouter();
   const { accessToken } = useAuth();
-  const { products, isLoadingProducts, toggleWishlist, isInWishlist, addToCart } = useFashion();
+  const { products, isLoadingProducts, toggleWishlist, isInWishlist, addToCart, fetchProducts } = useFashion();
   const [activeOfferIndex, setActiveOfferIndex] = useState(0);
   const [activeFilter, setActiveFilter] = useState('All');
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   const [countdown, setCountdown] = useState({ hours: 2, minutes: 12, seconds: 56 });
   const [searchQuery, setSearchQuery] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const loadUnreadNotifications = useCallback(async () => {
@@ -181,9 +182,28 @@ export default function HomeScreen() {
     setActiveOfferIndex(index);
   };
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([fetchProducts(), loadUnreadNotifications()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchProducts, loadUnreadNotifications]);
+
   return (
     <ThemedView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={ShopFlareColors.primary}
+            colors={[ShopFlareColors.primary]}
+          />
+        }
+      >
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
@@ -536,7 +556,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
     fontSize: 14,
-    color: ShopFlareColors.secondary,
+    color: ShopFlareColors.text,
   },
   filterButton: {
     backgroundColor: ShopFlareColors.accent,

@@ -52,7 +52,10 @@ export async function getProductMessages(
       'Authorization': `Bearer ${token}`,
     },
   });
-  if (!response.ok) throw new Error('Failed to fetch messages');
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || 'Failed to fetch messages');
+  }
   return response.json();
 }
 
@@ -65,7 +68,10 @@ export async function sendMessage(token: string, productId: number, message: str
     },
     body: JSON.stringify({ product_id: productId, message }),
   });
-  if (!response.ok) throw new Error('Failed to send message');
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || 'Failed to send message');
+  }
   return response.json();
 }
 
@@ -98,7 +104,10 @@ export async function getProductMessagesWithUser(
       'Authorization': `Bearer ${token}`,
     },
   });
-  if (!response.ok) throw new Error('Failed to fetch messages');
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || 'Failed to fetch messages');
+  }
   return response.json();
 }
 

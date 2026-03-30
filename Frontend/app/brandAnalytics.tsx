@@ -6,6 +6,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -130,7 +131,18 @@ export default function BrandAnalyticsScreen() {
       {loading ? (
         <ActivityIndicator style={{ marginTop: 60 }} size="large" color={ShopFlareColors.primary} />
       ) : data ? (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.content}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadAnalytics(true)}
+              tintColor={ShopFlareColors.primary}
+              colors={[ShopFlareColors.primary]}
+            />
+          }
+        >
           <View style={styles.heroCard}>
             <View style={styles.heroTopRow}>
               <View>

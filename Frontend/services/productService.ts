@@ -1,5 +1,5 @@
 // Product Service for Brand CRUD operations
-export const API_BASE_URL = 'https://shopflare-api.onrender.com/api';
+export const API_BASE_URL = 'https://shopflare-api-di4o.onrender.com/api';
 // export const API_BASE_URL = 'http://192.168.0.98:8000/api'; 
 
 export interface ProductImage {

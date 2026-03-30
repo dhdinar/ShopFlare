@@ -6,6 +6,7 @@ import {
   FlatList,
   Alert,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,6 +37,7 @@ export default function MyReviewsScreen() {
 
   const [reviews, setReviews] = useState<UserReview[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadReviews = useCallback(async () => {
     if (!accessToken) return;
@@ -105,6 +107,15 @@ export default function MyReviewsScreen() {
     </View>
   );
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadReviews();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadReviews]);
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -131,6 +142,14 @@ export default function MyReviewsScreen() {
           data={reviews}
           keyExtractor={item => String(item.id)}
           renderItem={renderReview}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={ShopFlareColors.primary}
+              colors={[ShopFlareColors.primary]}
+            />
+          }
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={

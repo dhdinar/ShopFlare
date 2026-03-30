@@ -1,4 +1,4 @@
-import { StyleSheet, View, ScrollView, TouchableOpacity, TextInput, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, BackHandler, Keyboard } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, TextInput, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, BackHandler, Keyboard, RefreshControl } from 'react-native';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -28,6 +28,8 @@ export default function ChatScreen() {
   const [activeChat, setActiveChat] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [refreshingConversations, setRefreshingConversations] = useState(false);
+  const [refreshingMessages, setRefreshingMessages] = useState(false);
   const [messageText, setMessageText] = useState('');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [inputBarHeight, setInputBarHeight] = useState(68);
@@ -88,12 +90,19 @@ export default function ChatScreen() {
       return getProductMessagesWithUser(accessToken, conv.product_id, conv.other_party_name);
     }
 
+    // For customer <-> brand chats, backend already scopes to the current customer for the product.
+    // Passing chat_with from UI labels (e.g., deep-link brand name) can break lookup and cause polling errors.
+    if (user?.user_type !== 'brand') {
+      return getProductMessages(accessToken, conv.product_id);
+    }
+
+    // For brand users, keep explicit chat partner to separate each buyer conversation per product.
     const chatPartner = conv.other_party_name && conv.other_party_name !== 'Customer'
       ? conv.other_party_name
       : undefined;
 
     return getProductMessages(accessToken, conv.product_id, chatPartner);
-  }, [accessToken]);
+  }, [accessToken, user?.user_type]);
 
   // Handle deep link: open chat for a specific product (only once per productId)
   useEffect(() => {
@@ -154,6 +163,29 @@ export default function ChatScreen() {
       setLoadingMessages(false);
     }
   };
+
+  const handleRefreshConversations = useCallback(async () => {
+    if (!accessToken) return;
+    setRefreshingConversations(true);
+    try {
+      await fetchConversations();
+    } finally {
+      setRefreshingConversations(false);
+    }
+  }, [accessToken, fetchConversations]);
+
+  const handleRefreshMessages = useCallback(async () => {
+    if (!activeChat || !accessToken) return;
+    setRefreshingMessages(true);
+    try {
+      const latestMessages = await fetchMessagesForChat(activeChat);
+      setMessages(latestMessages);
+    } catch (e) {
+      console.error('Failed to refresh messages:', e);
+    } finally {
+      setRefreshingMessages(false);
+    }
+  }, [activeChat, accessToken, fetchMessagesForChat]);
 
   useEffect(() => {
     if (!activeChat || !accessToken) return;
@@ -381,6 +413,14 @@ export default function ChatScreen() {
               data={messages}
               renderItem={renderMessage}
               keyExtractor={item => item.id.toString()}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshingMessages}
+                  onRefresh={handleRefreshMessages}
+                  tintColor={ShopFlareColors.primary}
+                  colors={[ShopFlareColors.primary]}
+                />
+              }
               contentContainerStyle={styles.messagesList}
               ListFooterComponent={<View style={{ height: Math.max(8, Math.round(inputBarHeight * 0.16)) + (isKeyboardVisible ? 0 : Math.max(insets.bottom, 0)) }} />}
               showsVerticalScrollIndicator={false}
@@ -475,7 +515,17 @@ export default function ChatScreen() {
           <ThemedText style={styles.emptySubText}>Ask a question on any product to start chatting!</ThemedText>
         </View>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshingConversations}
+              onRefresh={handleRefreshConversations}
+              tintColor={ShopFlareColors.primary}
+              colors={[ShopFlareColors.primary]}
+            />
+          }
+        >
           {filteredConversations.map((conv) => (
             <TouchableOpacity key={`${conv.product_id}_${conv.chat_type || 'brand'}_${conv.other_party_name}`} style={styles.conversationCard} onPress={() => openChat(conv)}>
               <View style={styles.avatarContainer}>

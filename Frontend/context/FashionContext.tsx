@@ -94,6 +94,8 @@ interface FashionContextType {
   products: Product[];
   isLoadingProducts: boolean;
   fetchProducts: () => Promise<void>;
+  refreshCart: () => Promise<void>;
+  refreshWishlist: () => Promise<void>;
   getProductById: (id: string) => Product | undefined;
   // Cart
   cart: CartItem[];
@@ -411,6 +413,8 @@ export const FashionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         products,
         isLoadingProducts,
         fetchProducts,
+        refreshCart: fetchCartFromBackend,
+        refreshWishlist: fetchWishlistFromBackend,
         getProductById,
         cart,
         wishlist,

@@ -1,4 +1,4 @@
-import { StyleSheet, View, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { useFashion, CartItem } from '@/context/FashionContext';
+import { useState, useCallback } from 'react';
 
 // Category emojis for products without images
 const CATEGORY_EMOJIS: Record<string, string> = {
@@ -25,8 +26,11 @@ export default function CartScreen() {
     updateCartItemQuantity, 
     getTotalPrice,
     getCartItemCount,
-    isLoadingProducts 
+    isLoadingProducts,
+    fetchProducts,
+    refreshCart,
   } = useFashion();
+  const [refreshing, setRefreshing] = useState(false);
 
   const getProductEmoji = (category?: string) => {
     if (!category) return CATEGORY_EMOJIS.default;
@@ -57,6 +61,15 @@ export default function CartScreen() {
   const total = subtotal + shipping;
   const totalItems = getCartItemCount();
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([fetchProducts(), refreshCart()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchProducts, refreshCart]);
+
   return (
     <ThemedView style={styles.container}>
       {/* Header */}
@@ -81,7 +94,18 @@ export default function CartScreen() {
         </View>
       ) : (
         <>
-          <ScrollView showsVerticalScrollIndicator={false} style={styles.listContainer}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            style={styles.listContainer}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={ShopFlareColors.primary}
+                colors={[ShopFlareColors.primary]}
+              />
+            }
+          >
             {cart.map((item) => {
               const imageUrl = getProductImage(item);
               return (

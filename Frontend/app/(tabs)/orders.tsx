@@ -1,4 +1,4 @@
-import { StyleSheet, View, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, FlatList, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { ThemedText } from '@/components/themed-text';
@@ -14,6 +14,7 @@ export default function OrdersScreen() {
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
 
   const isBrand = user?.user_type === 'brand';
@@ -34,6 +35,15 @@ export default function OrdersScreen() {
       setIsLoading(false);
     }
   }, [accessToken, isBrand]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchOrders();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchOrders]);
 
   const filters = [
     { key: 'all', label: 'All' },
@@ -298,6 +308,14 @@ export default function OrdersScreen() {
         <FlatList
           data={filteredOrders}
           keyExtractor={item => String(item.id)}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={ShopFlareColors.primary}
+              colors={[ShopFlareColors.primary]}
+            />
+          }
           contentContainerStyle={styles.orderList}
           showsVerticalScrollIndicator={false}
           renderItem={renderOrder}

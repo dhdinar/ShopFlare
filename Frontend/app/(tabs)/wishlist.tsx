@@ -1,4 +1,4 @@
-import { StyleSheet, View, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { useFashion, Product } from '@/context/FashionContext';
+import { useState, useCallback } from 'react';
 
 // Category emojis for products without images
 const CATEGORY_EMOJIS: Record<string, string> = {
@@ -24,8 +25,11 @@ export default function WishlistScreen() {
     wishlist, 
     toggleWishlist, 
     addToCart, 
-    isLoadingProducts 
+    isLoadingProducts,
+    fetchProducts,
+    refreshWishlist,
   } = useFashion();
+  const [refreshing, setRefreshing] = useState(false);
 
   // Get wishlisted products
   const wishlistItems = products.filter(p => wishlist.includes(p.id));
@@ -57,6 +61,15 @@ export default function WishlistScreen() {
     toggleWishlist(productId);
   };
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([fetchProducts(), refreshWishlist()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchProducts, refreshWishlist]);
+
   return (
     <ThemedView style={styles.container}>
       {/* Header */}
@@ -80,7 +93,18 @@ export default function WishlistScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.listContainer}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={ShopFlareColors.primary}
+              colors={[ShopFlareColors.primary]}
+            />
+          }
+        >
           {wishlistItems.map((item) => {
             const imageUrl = getProductImage(item);
             return (

@@ -1,7 +1,7 @@
-import { StyleSheet, View, ScrollView, TouchableOpacity, TextInput, FlatList, ActivityIndicator, Alert, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, TextInput, FlatList, ActivityIndicator, Alert, Dimensions, NativeSyntheticEvent, NativeScrollEvent, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useFashion, Product } from '@/context/FashionContext';
@@ -50,6 +50,7 @@ export default function ProductDetailScreen() {
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewComment, setReviewComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   
   const isWishlisted = product ? isInWishlist(product.id) : false;
 
@@ -211,6 +212,15 @@ export default function ProductDetailScreen() {
     }
   };
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([loadProduct(), loadReviews(), fetchProducts()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchProducts, id, accessToken, products]);
+
   if (isLoading) {
     return (
       <ThemedView style={styles.loadingContainer}>
@@ -250,7 +260,17 @@ export default function ProductDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={ShopFlareColors.primary}
+            colors={[ShopFlareColors.primary]}
+          />
+        }
+      >
         {/* Product Image Carousel */}
         <View style={styles.imageContainer}>
           {productImages.length > 0 ? (

@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,6 +50,7 @@ export default function AddressesScreen() {
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
   const [form, setForm] = useState<AddressInput>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadAddresses = useCallback(async () => {
     if (!accessToken) return;
@@ -197,6 +199,15 @@ export default function AddressesScreen() {
     </View>
   );
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadAddresses();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadAddresses]);
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -226,6 +237,14 @@ export default function AddressesScreen() {
           data={addresses}
           keyExtractor={item => String(item.id)}
           renderItem={renderAddress}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={ShopFlareColors.primary}
+              colors={[ShopFlareColors.primary]}
+            />
+          }
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
