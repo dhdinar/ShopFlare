@@ -7,6 +7,7 @@ import { ShopFlareColors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { useFashion, Product } from '@/context/FashionContext';
 import { useState, useCallback } from 'react';
+import { formatTk } from '@/utils/currency';
 
 // Category emojis for products without images
 const CATEGORY_EMOJIS: Record<string, string> = {
@@ -131,9 +132,9 @@ export default function WishlistScreen() {
                     <ThemedText style={styles.ratingText}>{item.rating ? parseFloat(String(item.rating)).toFixed(1) : '4.5'}</ThemedText>
                   </View>
                   <View style={styles.priceRow}>
-                    <ThemedText style={styles.price}>${parseFloat(String(item.price)).toFixed(2)}</ThemedText>
+                    <ThemedText style={styles.price}>{formatTk(item.price)}</ThemedText>
                     {item.originalPrice && (
-                      <ThemedText style={styles.originalPrice}>${parseFloat(String(item.originalPrice)).toFixed(2)}</ThemedText>
+                      <ThemedText style={styles.originalPrice}>{formatTk(item.originalPrice)}</ThemedText>
                     )}
                   </View>
                 </View>

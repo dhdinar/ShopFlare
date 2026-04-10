@@ -19,7 +19,12 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isInitialLoading) return;
 
-    const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
+    const currentPath = segments.join('/');
+    const inAuthGroup =
+      currentPath.startsWith('login') ||
+      currentPath.startsWith('register') ||
+      currentPath.startsWith('verify-email') ||
+      currentPath.startsWith('forgot-password');
 
     if (isSignedIn && inAuthGroup) {
       router.replace('/(tabs)');
@@ -44,6 +49,8 @@ function RootLayoutNav() {
             <>
               <Stack.Screen name="login/index" />
               <Stack.Screen name="register/index" />
+              <Stack.Screen name="verify-email/index" />
+              <Stack.Screen name="forgot-password/index" />
             </>
           ) : (
             <>

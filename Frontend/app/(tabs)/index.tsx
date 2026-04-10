@@ -11,6 +11,7 @@ import { useFashion } from '@/context/FashionContext';
 import { FASHION_CATEGORIES, FASHION_SUBCATEGORIES, FILTER_CATEGORIES } from '@/constants/fashionData';
 import { useAuth } from '@/context/AuthContext';
 import { getUnreadNotificationsCount } from '@/services/notificationService';
+import { formatTk } from '@/utils/currency';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 60;
@@ -443,9 +444,9 @@ export default function HomeScreen() {
                         </View>
                       </View>
                       <View style={styles.priceRow}>
-                        <ThemedText style={styles.productPrice}>${parseFloat(String(product.price)).toFixed(2)}</ThemedText>
+                        <ThemedText style={styles.productPrice}>{formatTk(product.price)}</ThemedText>
                         {product.originalPrice && (
-                          <ThemedText style={styles.originalPrice}>${parseFloat(String(product.originalPrice)).toFixed(2)}</ThemedText>
+                          <ThemedText style={styles.originalPrice}>{formatTk(product.originalPrice)}</ThemedText>
                         )}
                       </View>
                       <TouchableOpacity

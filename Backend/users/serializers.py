@@ -131,6 +131,37 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(required=True, write_only=True)
 
 
+class VerificationSendSerializer(serializers.Serializer):
+    """Serializer for sending or resending verification codes"""
+    email = serializers.EmailField(required=True)
+    user_type = serializers.ChoiceField(choices=['user', 'brand'], required=True)
+
+
+class VerificationConfirmSerializer(serializers.Serializer):
+    """Serializer for confirming email verification code"""
+    email = serializers.EmailField(required=True)
+    user_type = serializers.ChoiceField(choices=['user', 'brand'], required=True)
+    code = serializers.CharField(required=True, max_length=6, min_length=6)
+
+
+class ForgotPasswordRequestSerializer(serializers.Serializer):
+    """Serializer for requesting a forgot-password code"""
+    email = serializers.EmailField(required=True)
+
+
+class ForgotPasswordConfirmSerializer(serializers.Serializer):
+    """Serializer for confirming reset code and setting new password"""
+    email = serializers.EmailField(required=True)
+    code = serializers.CharField(required=True, max_length=6, min_length=6)
+    new_password = serializers.CharField(required=True, write_only=True, validators=[validate_password])
+    new_password2 = serializers.CharField(required=True, write_only=True)
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['new_password2']:
+            raise serializers.ValidationError({'new_password': "Password fields didn't match."})
+        return attrs
+
+
 class ProductImageSerializer(serializers.ModelSerializer):
     """Serializer for product images (base64 stored in database)"""
     image_base64 = serializers.SerializerMethodField()

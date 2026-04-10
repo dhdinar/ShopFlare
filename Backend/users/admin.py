@@ -13,6 +13,8 @@ from .models import (
     Order,
     OrderItem,
     Notification,
+    EmailVerificationCode,
+    PasswordResetCode,
 )
 
 
@@ -200,4 +202,22 @@ class NotificationAdmin(admin.ModelAdmin):
     search_fields = ['title', 'body', 'recipient_user__username', 'recipient_brand__username']
     readonly_fields = ['created_at']
     autocomplete_fields = ['recipient_user', 'recipient_brand', 'related_order', 'related_product']
+    ordering = ['-created_at']
+
+
+@admin.register(EmailVerificationCode)
+class EmailVerificationCodeAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'brand', 'is_used', 'attempts', 'expires_at', 'created_at']
+    list_filter = ['is_used', 'created_at', 'expires_at']
+    search_fields = ['user__username', 'user__email', 'brand__username', 'brand__email']
+    readonly_fields = ['created_at', 'updated_at']
+    ordering = ['-created_at']
+
+
+@admin.register(PasswordResetCode)
+class PasswordResetCodeAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'brand', 'is_used', 'attempts', 'expires_at', 'created_at']
+    list_filter = ['is_used', 'created_at', 'expires_at']
+    search_fields = ['user__username', 'user__email', 'brand__username', 'brand__email']
+    readonly_fields = ['created_at', 'updated_at']
     ordering = ['-created_at']

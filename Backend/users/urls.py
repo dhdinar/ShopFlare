@@ -6,6 +6,11 @@ urlpatterns = [
     # Auth endpoints
     path('register/', views.RegisterView.as_view(), name='register'),
     path('register/brand/', views.BrandRegisterView.as_view(), name='register_brand'),
+    path('verify-email/send/', views.send_verification_code_view, name='send_verification_code'),
+    path('verify-email/resend/', views.resend_verification_code_view, name='resend_verification_code'),
+    path('verify-email/confirm/', views.verify_email_view, name='verify_email'),
+    path('forgot-password/request/', views.forgot_password_request_view, name='forgot_password_request'),
+    path('forgot-password/confirm/', views.forgot_password_confirm_view, name='forgot_password_confirm'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

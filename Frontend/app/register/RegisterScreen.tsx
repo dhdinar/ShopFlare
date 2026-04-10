@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   Text,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -15,8 +14,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import InlineMessage from '@/components/ui/inline-message';
 import { useAuth } from '@/context/AuthContext';
 import { ShopFlareColors } from '@/constants/theme';
+import { useRouter } from 'expo-router';
 
 interface RegisterScreenProps {
   onNavigateToLogin: () => void;
@@ -24,6 +25,7 @@ interface RegisterScreenProps {
 
 export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProps) {
   const { register, isLoading } = useAuth();
+  const router = useRouter();
   const [isBrandRegistration, setIsBrandRegistration] = useState(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
   
@@ -32,8 +34,16 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [formMessage, setFormMessage] = useState('');
+  const [messageType, setMessageType] = useState<'error' | 'success' | 'info'>('error');
+  const [usernameError, setUsernameError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [password2Error, setPassword2Error] = useState('');
   
   // Brand-specific fields (username is the brand name for brands)
   const [brandDescription, setBrandDescription] = useState('');
@@ -50,18 +60,47 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
   }, [isBrandRegistration]);
 
   const handleRegister = async () => {
+    setFormMessage('');
+    setUsernameError('');
+    setEmailError('');
+    setPasswordError('');
+    setPassword2Error('');
+
+    let hasError = false;
     if (!username || !email || !password || !password2) {
-      Alert.alert('Error', 'Please fill in all required fields');
-      return;
+      if (!username) {
+        setUsernameError(isBrandRegistration ? 'Brand name is required.' : 'Username is required.');
+        hasError = true;
+      }
+      if (!email) {
+        setEmailError('Email is required.');
+        hasError = true;
+      }
+      if (!password) {
+        setPasswordError('Password is required.');
+        hasError = true;
+      }
+      if (!password2) {
+        setPassword2Error('Confirm your password.');
+        hasError = true;
+      }
+
+      if (hasError) {
+        setMessageType('error');
+        setFormMessage('Please complete all required fields.');
+        return;
+      }
     }
 
     if (password !== password2) {
-      Alert.alert('Error', 'Passwords do not match');
+      setPassword2Error('Passwords do not match.');
+      setMessageType('error');
+      setFormMessage('Please correct the highlighted fields.');
       return;
     }
 
     try {
-      await register({
+      const result = await register({
         username,  // For brands, this IS the brand name
         email,
         password,
@@ -75,9 +114,18 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
           brand_address: brandAddress,
         }),
       });
-      Alert.alert('Success', `${isBrandRegistration ? 'Brand' : 'Account'} created successfully!`);
+      setMessageType('success');
+      setFormMessage(result.message || 'Registration successful. Please verify your email.');
+      router.push({
+        pathname: '/verify-email',
+        params: {
+          email: result.email,
+          userType: result.user_type,
+        },
+      });
     } catch (error: any) {
-      Alert.alert('Registration Failed', error.message || 'An error occurred');
+      setMessageType('error');
+      setFormMessage(error.message || 'Registration failed. Please try again.');
     }
   };
 
@@ -163,11 +211,16 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
               placeholder={isBrandRegistration ? "Brand Name *" : "Username"}
               placeholderTextColor={ShopFlareColors.textLight}
               value={username}
-              onChangeText={setUsername}
+              onChangeText={(text) => {
+                setUsername(text);
+                if (usernameError) setUsernameError('');
+                if (formMessage) setFormMessage('');
+              }}
               editable={!isLoading}
               autoCapitalize="none"
             />
           </View>
+          {!!usernameError && <Text style={styles.fieldError}>{usernameError}</Text>}
 
           <View style={styles.inputContainer}>
             <Ionicons name="mail-outline" size={20} color={ShopFlareColors.textLight} style={styles.inputIcon} />
@@ -177,11 +230,16 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
               placeholderTextColor={ShopFlareColors.textLight}
               keyboardType="email-address"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (emailError) setEmailError('');
+                if (formMessage) setFormMessage('');
+              }}
               editable={!isLoading}
               autoCapitalize="none"
             />
           </View>
+          {!!emailError && <Text style={styles.fieldError}>{emailError}</Text>}
 
           {!isBrandRegistration && (
             <View style={styles.row}>
@@ -259,12 +317,28 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
               style={[styles.input, isLoading && styles.inputDisabled]}
               placeholder="Password"
               placeholderTextColor={ShopFlareColors.textLight}
-              secureTextEntry
+              secureTextEntry={!showPassword}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (passwordError) setPasswordError('');
+                if (formMessage) setFormMessage('');
+              }}
               editable={!isLoading}
             />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowPassword((prev) => !prev)}
+              disabled={isLoading}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={ShopFlareColors.textLight}
+              />
+            </TouchableOpacity>
           </View>
+          {!!passwordError && <Text style={styles.fieldError}>{passwordError}</Text>}
 
           <View style={styles.inputContainer}>
             <Ionicons name="lock-closed-outline" size={20} color={ShopFlareColors.textLight} style={styles.inputIcon} />
@@ -272,12 +346,30 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
               style={[styles.input, isLoading && styles.inputDisabled]}
               placeholder="Confirm Password"
               placeholderTextColor={ShopFlareColors.textLight}
-              secureTextEntry
+              secureTextEntry={!showConfirmPassword}
               value={password2}
-              onChangeText={setPassword2}
+              onChangeText={(text) => {
+                setPassword2(text);
+                if (password2Error) setPassword2Error('');
+                if (formMessage) setFormMessage('');
+              }}
               editable={!isLoading}
             />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowConfirmPassword((prev) => !prev)}
+              disabled={isLoading}
+            >
+              <Ionicons
+                name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={ShopFlareColors.textLight}
+              />
+            </TouchableOpacity>
           </View>
+          {!!password2Error && <Text style={styles.fieldError}>{password2Error}</Text>}
+
+          {!!formMessage && <InlineMessage message={formMessage} variant={messageType} />}
 
           <TouchableOpacity
             style={[styles.button, isLoading && styles.buttonDisabled]}
@@ -428,12 +520,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: ShopFlareColors.text,
   },
+  eyeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
   textArea: {
     minHeight: 80,
     textAlignVertical: 'top',
   },
   inputDisabled: {
     opacity: 0.6,
+  },
+  fieldError: {
+    marginTop: -10,
+    marginBottom: 10,
+    marginLeft: 8,
+    color: ShopFlareColors.error,
+    fontSize: 12,
+    fontWeight: '500',
   },
   button: {
     backgroundColor: ShopFlareColors.accent,

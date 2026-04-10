@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -14,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { ThemedText } from '@/components/themed-text';
+import InlineMessage from '@/components/ui/inline-message';
 import { ShopFlareColors } from '@/constants/theme';
 import * as profileService from '@/services/profileService';
 
@@ -29,25 +29,57 @@ export default function ChangePasswordScreen() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [formMessage, setFormMessage] = useState('');
+  const [messageType, setMessageType] = useState<'error' | 'success' | 'info'>('error');
+  const [oldPasswordError, setOldPasswordError] = useState('');
+  const [newPasswordError, setNewPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
 
   const handleChangePassword = async () => {
+    setFormMessage('');
+    setOldPasswordError('');
+    setNewPasswordError('');
+    setConfirmPasswordError('');
+
     if (!accessToken) {
-      Alert.alert('Error', 'You are not authenticated. Please log in again.');
+      setMessageType('error');
+      setFormMessage('You are not authenticated. Please log in again.');
       return;
     }
 
+    let hasError = false;
     if (!oldPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all password fields.');
-      return;
+      if (!oldPassword) {
+        setOldPasswordError('Current password is required.');
+        hasError = true;
+      }
+      if (!newPassword) {
+        setNewPasswordError('New password is required.');
+        hasError = true;
+      }
+      if (!confirmPassword) {
+        setConfirmPasswordError('Confirm your new password.');
+        hasError = true;
+      }
+
+      if (hasError) {
+        setMessageType('error');
+        setFormMessage('Please fill in all password fields.');
+        return;
+      }
     }
 
     if (newPassword.length < 8) {
-      Alert.alert('Error', 'New password must be at least 8 characters.');
+      setNewPasswordError('New password must be at least 8 characters.');
+      setMessageType('error');
+      setFormMessage('Please correct the highlighted fields.');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New password and confirmation do not match.');
+      setConfirmPasswordError('New password and confirmation do not match.');
+      setMessageType('error');
+      setFormMessage('Please correct the highlighted fields.');
       return;
     }
 
@@ -59,13 +91,17 @@ export default function ChangePasswordScreen() {
         await profileService.changePassword(accessToken, oldPassword, newPassword, confirmPassword);
       }
 
-      Alert.alert('Success', 'Password changed successfully.');
+      setMessageType('success');
+      setFormMessage('Password changed successfully. Returning...');
       setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      router.back();
+      setTimeout(() => {
+        router.back();
+      }, 1200);
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to change password.');
+      setMessageType('error');
+      setFormMessage(e?.message || 'Failed to change password.');
     } finally {
       setSaving(false);
     }
@@ -98,7 +134,11 @@ export default function ChangePasswordScreen() {
             <TextInput
               style={[styles.input, styles.passwordInput]}
               value={oldPassword}
-              onChangeText={setOldPassword}
+              onChangeText={(text) => {
+                setOldPassword(text);
+                if (oldPasswordError) setOldPasswordError('');
+                if (formMessage) setFormMessage('');
+              }}
               placeholder="Enter current password"
               placeholderTextColor={ShopFlareColors.textLight}
               secureTextEntry={!showOld}
@@ -108,6 +148,7 @@ export default function ChangePasswordScreen() {
               <Ionicons name={showOld ? 'eye-off' : 'eye'} size={20} color={ShopFlareColors.textLight} />
             </TouchableOpacity>
           </View>
+          {!!oldPasswordError && <ThemedText style={styles.fieldError}>{oldPasswordError}</ThemedText>}
         </View>
 
         <View style={styles.fieldGroup}>
@@ -116,7 +157,11 @@ export default function ChangePasswordScreen() {
             <TextInput
               style={[styles.input, styles.passwordInput]}
               value={newPassword}
-              onChangeText={setNewPassword}
+              onChangeText={(text) => {
+                setNewPassword(text);
+                if (newPasswordError) setNewPasswordError('');
+                if (formMessage) setFormMessage('');
+              }}
               placeholder="Enter new password"
               placeholderTextColor={ShopFlareColors.textLight}
               secureTextEntry={!showNew}
@@ -126,6 +171,7 @@ export default function ChangePasswordScreen() {
               <Ionicons name={showNew ? 'eye-off' : 'eye'} size={20} color={ShopFlareColors.textLight} />
             </TouchableOpacity>
           </View>
+          {!!newPasswordError && <ThemedText style={styles.fieldError}>{newPasswordError}</ThemedText>}
         </View>
 
         <View style={styles.fieldGroup}>
@@ -134,7 +180,11 @@ export default function ChangePasswordScreen() {
             <TextInput
               style={[styles.input, styles.passwordInput]}
               value={confirmPassword}
-              onChangeText={setConfirmPassword}
+              onChangeText={(text) => {
+                setConfirmPassword(text);
+                if (confirmPasswordError) setConfirmPasswordError('');
+                if (formMessage) setFormMessage('');
+              }}
               placeholder="Confirm new password"
               placeholderTextColor={ShopFlareColors.textLight}
               secureTextEntry={!showConfirm}
@@ -144,7 +194,10 @@ export default function ChangePasswordScreen() {
               <Ionicons name={showConfirm ? 'eye-off' : 'eye'} size={20} color={ShopFlareColors.textLight} />
             </TouchableOpacity>
           </View>
+          {!!confirmPasswordError && <ThemedText style={styles.fieldError}>{confirmPasswordError}</ThemedText>}
         </View>
+
+        {!!formMessage && <InlineMessage message={formMessage} variant={messageType} />}
 
         <TouchableOpacity
           style={[styles.saveButton, saving && styles.saveButtonDisabled]}
@@ -205,6 +258,12 @@ const styles = StyleSheet.create({
   passwordInputWrapper: { position: 'relative' },
   passwordInput: { paddingRight: 46 },
   eyeIcon: { position: 'absolute', right: 14, top: 14 },
+  fieldError: {
+    marginTop: 6,
+    color: ShopFlareColors.error,
+    fontSize: 12,
+    fontWeight: '500',
+  },
   saveButton: {
     backgroundColor: ShopFlareColors.accent,
     borderRadius: 12,

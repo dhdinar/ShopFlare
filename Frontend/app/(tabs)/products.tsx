@@ -10,6 +10,7 @@ import { getProducts, createProduct, updateProduct, deleteProduct, Product, Prod
 import * as ImagePicker from 'expo-image-picker';
 import { ShopFlareColors } from '@/constants/theme';
 import { FASHION_CATEGORIES, FASHION_SUBCATEGORIES } from '@/constants/fashionData';
+import { formatTk } from '@/utils/currency';
 
 export default function ProductsScreen() {
   const { user, accessToken } = useAuth();
@@ -304,10 +305,10 @@ export default function ProductsScreen() {
                   <ThemedText style={styles.productCategory}>{item.category || 'Uncategorized'}</ThemedText>
                   <View style={styles.priceRow}>
                     <ThemedText style={styles.productPrice}>
-                      ${hasValidDiscount ? discountedPrice!.toFixed(2) : mainPrice.toFixed(2)}
+                      {formatTk(hasValidDiscount ? discountedPrice! : mainPrice)}
                     </ThemedText>
                     {hasValidDiscount && (
-                      <ThemedText style={styles.salePrice}>${mainPrice.toFixed(2)}</ThemedText>
+                      <ThemedText style={styles.salePrice}>{formatTk(mainPrice)}</ThemedText>
                     )}
                   </View>
                   <View style={styles.stockRow}>

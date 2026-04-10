@@ -16,6 +16,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ShopFlareColors } from '@/constants/theme';
 import * as profileService from '@/services/profileService';
 import { BrandAnalytics } from '@/services/profileService';
+import { formatTk } from '@/utils/currency';
 
 interface StatCardProps {
   icon: string;
@@ -34,13 +35,6 @@ function StatCard({ icon, label, value, tone }: StatCardProps) {
       <ThemedText style={styles.statLabel}>{label}</ThemedText>
     </View>
   );
-}
-
-function formatCurrency(value: number) {
-  return `$${value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
 }
 
 function RatingStars({ rating }: { rating: number }) {
@@ -154,7 +148,7 @@ export default function BrandAnalyticsScreen() {
                 <ThemedText style={styles.heroBadgeText}>Live</ThemedText>
               </View>
             </View>
-            <ThemedText style={styles.heroAmount}>{formatCurrency(totalSales)}</ThemedText>
+            <ThemedText style={styles.heroAmount}>{formatTk(totalSales)}</ThemedText>
             <ThemedText style={styles.heroCaption}>Completed Sales</ThemedText>
           </View>
 
@@ -162,7 +156,7 @@ export default function BrandAnalyticsScreen() {
           <View style={styles.statsGrid}>
             <StatCard icon="receipt-outline" label="Delivered Orders" value={totalOrders} tone={ShopFlareColors.infoLight} />
             <StatCard icon="cube-outline" label="Units Sold" value={unitsSold} tone={ShopFlareColors.successLight} />
-            <StatCard icon="wallet-outline" label="Avg Order Value" value={formatCurrency(avgOrderValue)} tone={ShopFlareColors.warningLight} />
+            <StatCard icon="wallet-outline" label="Avg Order Value" value={formatTk(avgOrderValue)} tone={ShopFlareColors.warningLight} />
             <StatCard icon="albums-outline" label="Products" value={`${activeProducts}/${totalProducts}`} tone={ShopFlareColors.accentLight} />
           </View>
 
@@ -231,7 +225,7 @@ export default function BrandAnalyticsScreen() {
                       <ThemedText style={styles.productName} numberOfLines={1}>
                         {product.name}
                       </ThemedText>
-                      <ThemedText style={styles.productPrice}>{formatCurrency(Number(product.revenue || 0))}</ThemedText>
+                      <ThemedText style={styles.productPrice}>{formatTk(Number(product.revenue || 0))}</ThemedText>
                     </View>
                     <View style={styles.savesCount}>
                       <Ionicons name="cube-outline" size={14} color={ShopFlareColors.success} />
@@ -256,7 +250,7 @@ export default function BrandAnalyticsScreen() {
                       <ThemedText style={styles.productName} numberOfLines={1}>
                         {product.name}
                       </ThemedText>
-                      <ThemedText style={styles.productPrice}>${product.price}</ThemedText>
+                      <ThemedText style={styles.productPrice}>{formatTk(product.price)}</ThemedText>
                     </View>
                     <View style={styles.savesCount}>
                       <Ionicons name="heart" size={14} color={ShopFlareColors.error} />

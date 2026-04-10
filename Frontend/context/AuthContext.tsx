@@ -34,7 +34,7 @@ interface AuthContextType {
   
   // Actions
   login: (username: string, password: string) => Promise<void>;
-  register: (data: authService.RegisterData) => Promise<void>;
+  register: (data: authService.RegisterData) => Promise<authService.VerificationRequirement>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
   updateBrandProfile: (data: Partial<User>) => Promise<void>;
@@ -100,14 +100,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const register = async (data: authService.RegisterData) => {
     setIsLoading(true);
     try {
-      const { user: userData, tokens } = await authService.register(data);
-
-      setAccessToken(tokens.access);
-      setRefreshToken(tokens.refresh);
-      setUser(userData);
-
-      await tokenStorage.saveTokens(tokens.access, tokens.refresh);
-      await tokenStorage.saveUser(userData);
+      return await authService.register(data);
     } catch (error: any) {
       throw error;
     } finally {

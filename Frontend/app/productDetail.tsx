@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
 import { getProduct, getProductReviews, createReview, Review, ReviewsResponse } from '@/services/productService';
+import { formatTk } from '@/utils/currency';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -353,9 +354,9 @@ export default function ProductDetailScreen() {
                   <ThemedText style={styles.category}>{product.category}</ThemedText>
                   
                   <View style={styles.priceContainer}>
-                    <ThemedText style={styles.price}>${parseFloat(String(product.price)).toFixed(2)}</ThemedText>
+                    <ThemedText style={styles.price}>{formatTk(product.price)}</ThemedText>
                     {product.originalPrice && (
-                      <ThemedText style={styles.originalPrice}>${parseFloat(String(product.originalPrice)).toFixed(2)}</ThemedText>
+                      <ThemedText style={styles.originalPrice}>{formatTk(product.originalPrice)}</ThemedText>
                     )}
                     {product.originalPrice && (
                       <View style={styles.discountBadge}>

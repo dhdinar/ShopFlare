@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   Text,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -16,6 +15,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/context/AuthContext';
 import { ShopFlareColors } from '@/constants/theme';
+import { useRouter } from 'expo-router';
+import { ApiError } from '@/services/authService';
+import InlineMessage from '@/components/ui/inline-message';
 
 interface LoginScreenProps {
   onNavigateToRegister: () => void;
@@ -23,13 +25,36 @@ interface LoginScreenProps {
 
 export default function LoginScreen({ onNavigateToRegister }: LoginScreenProps) {
   const { login, isLoading } = useAuth();
+  const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [formMessage, setFormMessage] = useState('');
+  const [messageType, setMessageType] = useState<'error' | 'success' | 'info'>('error');
+  const [usernameError, setUsernameError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const handleLogin = async () => {
+    setFormMessage('');
+    setUsernameError('');
+    setPasswordError('');
+
+    let hasError = false;
     if (!username || !password) {
-      Alert.alert('Error', 'Please enter username and password');
-      return;
+      if (!username) {
+        setUsernameError('Username is required.');
+        hasError = true;
+      }
+      if (!password) {
+        setPasswordError('Password is required.');
+        hasError = true;
+      }
+
+      if (hasError) {
+        setMessageType('error');
+        setFormMessage('Please correct the highlighted fields.');
+        return;
+      }
     }
 
     try {
@@ -39,7 +64,24 @@ export default function LoginScreen({ onNavigateToRegister }: LoginScreenProps) 
       // The layout will automatically navigate to tabs when isSignedIn becomes true
     } catch (error: any) {
       console.error('LoginScreen: Login failed:', error);
-      Alert.alert('Login Failed', error.message || JSON.stringify(error));
+
+      if (error instanceof ApiError && error.code === 'email_not_verified') {
+        const accountEmail = error.data?.email;
+        const accountType = error.data?.user_type;
+        if (accountEmail && accountType) {
+          router.push({
+            pathname: '/verify-email',
+            params: {
+              email: accountEmail,
+              userType: accountType,
+            },
+          });
+          return;
+        }
+      }
+
+      setMessageType('error');
+      setFormMessage(error.message || 'Login failed. Please try again.');
     }
   };
 
@@ -73,11 +115,16 @@ export default function LoginScreen({ onNavigateToRegister }: LoginScreenProps) 
               placeholder="Username"
               placeholderTextColor={ShopFlareColors.textLight}
               value={username}
-              onChangeText={setUsername}
+              onChangeText={(text) => {
+                setUsername(text);
+                if (usernameError) setUsernameError('');
+                if (formMessage) setFormMessage('');
+              }}
               editable={!isLoading}
               autoCapitalize="none"
             />
           </View>
+          {!!usernameError && <Text style={styles.fieldError}>{usernameError}</Text>}
 
           <View style={styles.inputContainer}>
             <Ionicons name="lock-closed-outline" size={20} color={ShopFlareColors.textLight} style={styles.inputIcon} />
@@ -85,12 +132,30 @@ export default function LoginScreen({ onNavigateToRegister }: LoginScreenProps) 
               style={[styles.input, isLoading && styles.inputDisabled]}
               placeholder="Password"
               placeholderTextColor={ShopFlareColors.textLight}
-              secureTextEntry
+              secureTextEntry={!showPassword}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (passwordError) setPasswordError('');
+                if (formMessage) setFormMessage('');
+              }}
               editable={!isLoading}
             />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowPassword((prev) => !prev)}
+              disabled={isLoading}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={ShopFlareColors.textLight}
+              />
+            </TouchableOpacity>
           </View>
+          {!!passwordError && <Text style={styles.fieldError}>{passwordError}</Text>}
+
+          {!!formMessage && <InlineMessage message={formMessage} variant={messageType} />}
 
           <TouchableOpacity
             style={[styles.button, isLoading && styles.buttonDisabled]}
@@ -112,7 +177,7 @@ export default function LoginScreen({ onNavigateToRegister }: LoginScreenProps) 
             </ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/forgot-password')}>
             <ThemedText style={[styles.link, styles.forgotPassword]}>
               Forgot Password?
             </ThemedText>
@@ -195,8 +260,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: ShopFlareColors.text,
   },
+  eyeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
   inputDisabled: {
     opacity: 0.6,
+  },
+  fieldError: {
+    marginTop: -10,
+    marginBottom: 10,
+    marginLeft: 8,
+    color: ShopFlareColors.error,
+    fontSize: 12,
+    fontWeight: '500',
   },
   button: {
     backgroundColor: ShopFlareColors.accent,
@@ -235,5 +312,6 @@ const styles = StyleSheet.create({
   },
   forgotPassword: {
     marginBottom: 0,
+    color: ShopFlareColors.accent,
   },
 });

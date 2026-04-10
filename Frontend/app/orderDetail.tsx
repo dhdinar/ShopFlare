@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { getOrder, getBrandOrder, cancelOrder, Order } from '@/services/orderService';
+import { formatTk } from '@/utils/currency';
 
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -223,7 +224,7 @@ export default function OrderDetailScreen() {
                 <ThemedText style={styles.itemQty}>Qty: {item.quantity}</ThemedText>
               </View>
               <ThemedText style={styles.itemPrice}>
-                ${Number(item.line_total).toFixed(2)}
+                {formatTk(item.line_total)}
               </ThemedText>
             </View>
           ))}
@@ -241,18 +242,18 @@ export default function OrderDetailScreen() {
             </View>
             <View style={styles.infoRow}>
               <ThemedText style={styles.infoLabel}>Subtotal</ThemedText>
-              <ThemedText style={styles.infoValue}>${Number(order.subtotal).toFixed(2)}</ThemedText>
+              <ThemedText style={styles.infoValue}>{formatTk(order.subtotal)}</ThemedText>
             </View>
             <View style={styles.infoRow}>
               <ThemedText style={styles.infoLabel}>Shipping</ThemedText>
               <ThemedText style={[styles.infoValue, Number(order.shipping_cost) === 0 && { color: ShopFlareColors.success }]}> 
-                {Number(order.shipping_cost) === 0 ? 'FREE' : `$${Number(order.shipping_cost).toFixed(2)}`}
+                {Number(order.shipping_cost) === 0 ? 'FREE' : formatTk(order.shipping_cost)}
               </ThemedText>
             </View>
             <View style={styles.divider} />
             <View style={styles.infoRow}>
               <ThemedText style={styles.totalLabel}>Total</ThemedText>
-              <ThemedText style={styles.totalValue}>${Number(order.total_amount).toFixed(2)}</ThemedText>
+              <ThemedText style={styles.totalValue}>{formatTk(order.total_amount)}</ThemedText>
             </View>
           </View>
         </View>

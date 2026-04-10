@@ -5,6 +5,7 @@ import { COLORS } from '@/constants/fashionData';
 import { ShopFlareColors } from '@/constants/theme';
 import { useFashion } from '@/context/FashionContext';
 import { Product } from '@/context/FashionContext';
+import { formatTk } from '@/utils/currency';
 
 interface ProductCardProps {
   product: Product;
@@ -39,9 +40,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
           {product.name}
         </Text>
         <View style={styles.priceContainer}>
-          <Text style={styles.price}>${product.price.toFixed(2)}</Text>
+          <Text style={styles.price}>{formatTk(product.price)}</Text>
           {product.originalPrice && (
-            <Text style={styles.originalPrice}>${product.originalPrice.toFixed(2)}</Text>
+            <Text style={styles.originalPrice}>{formatTk(product.originalPrice)}</Text>
           )}
         </View>
         {totalRatings > 0 && (

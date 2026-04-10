@@ -7,6 +7,7 @@ import { ShopFlareColors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { useFashion, CartItem } from '@/context/FashionContext';
 import { useState, useCallback } from 'react';
+import { formatTk } from '@/utils/currency';
 
 // Category emojis for products without images
 const CATEGORY_EMOJIS: Record<string, string> = {
@@ -125,7 +126,7 @@ export default function CartScreen() {
                   <View style={styles.productInfo}>
                     <ThemedText style={styles.productName} numberOfLines={2}>{item.name}</ThemedText>
                     <ThemedText style={styles.productVariant}>{item.selectedSize} • {item.selectedColor}</ThemedText>
-                    <ThemedText style={styles.price}>${parseFloat(String(item.price)).toFixed(2)}</ThemedText>
+                    <ThemedText style={styles.price}>{formatTk(item.price)}</ThemedText>
                   </View>
                   <View style={styles.actions}>
                     <TouchableOpacity 
@@ -181,18 +182,18 @@ export default function CartScreen() {
           <View style={styles.summaryContainer}>
             <View style={styles.summaryRow}>
               <ThemedText style={styles.summaryLabel}>Subtotal</ThemedText>
-              <ThemedText style={styles.summaryValue}>${subtotal.toFixed(2)}</ThemedText>
+              <ThemedText style={styles.summaryValue}>{formatTk(subtotal)}</ThemedText>
             </View>
             <View style={styles.summaryRow}>
               <ThemedText style={styles.summaryLabel}>Shipping</ThemedText>
               <ThemedText style={styles.summaryValue}>
-                {shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}
+                {shipping === 0 ? 'FREE' : formatTk(shipping)}
               </ThemedText>
             </View>
             <View style={styles.divider} />
             <View style={styles.summaryRow}>
               <ThemedText style={styles.totalLabel}>Total</ThemedText>
-              <ThemedText style={styles.totalValue}>${total.toFixed(2)}</ThemedText>
+              <ThemedText style={styles.totalValue}>{formatTk(total)}</ThemedText>
             </View>
             <TouchableOpacity style={styles.checkoutButton} onPress={() => router.push('/checkout')}>
               <ThemedText style={styles.checkoutButtonText}>Proceed to Checkout</ThemedText>

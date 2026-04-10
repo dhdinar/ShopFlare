@@ -1,14 +1,16 @@
-import { StyleSheet, View, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import InlineMessage from '@/components/ui/inline-message';
 import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useFashion } from '@/context/FashionContext';
 import { getAddresses, Address } from '@/services/profileService';
 import { checkout, CheckoutData } from '@/services/orderService';
+import { formatTk } from '@/utils/currency';
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -21,6 +23,9 @@ export default function CheckoutScreen() {
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isPlacing, setIsPlacing] = useState(false);
+  const [formMessage, setFormMessage] = useState('');
+  const [messageType, setMessageType] = useState<'error' | 'success' | 'info'>('error');
+  const [placedOrderId, setPlacedOrderId] = useState<number | null>(null);
 
   const subtotal = getTotalPrice();
   const shipping = 0; // free shipping
@@ -50,13 +55,18 @@ export default function CheckoutScreen() {
   const handlePlaceOrder = async () => {
     if (!accessToken) return;
 
+    setFormMessage('');
+    setPlacedOrderId(null);
+
     if (!selectedAddressId) {
-      Alert.alert('No Address', 'Please select or add a shipping address before placing your order.');
+      setMessageType('error');
+      setFormMessage('Please select or add a shipping address before placing your order.');
       return;
     }
 
     if (cart.length === 0) {
-      Alert.alert('Empty Cart', 'Your cart is empty.');
+      setMessageType('error');
+      setFormMessage('Your cart is empty.');
       return;
     }
 
@@ -74,14 +84,12 @@ export default function CheckoutScreen() {
       await clearCart();
       await fetchProducts(); // refresh stock
 
-      Alert.alert(
-        'Order Placed!',
-        `Your order #${order.id} has been placed successfully.`,
-        [{ text: 'View Orders', onPress: () => router.replace('/(tabs)/orders') },
-         { text: 'OK', onPress: () => router.replace('/(tabs)') }]
-      );
+      setPlacedOrderId(order.id);
+      setMessageType('success');
+      setFormMessage(`Your order #${order.id} has been placed successfully.`);
     } catch (err: any) {
-      Alert.alert('Checkout Failed', err.message || 'Something went wrong.');
+      setMessageType('error');
+      setFormMessage(err.message || 'Checkout failed. Something went wrong.');
     } finally {
       setIsPlacing(false);
     }
@@ -122,6 +130,23 @@ export default function CheckoutScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {!!formMessage && (
+          <View style={styles.messageWrap}>
+            <InlineMessage message={formMessage} variant={messageType} />
+          </View>
+        )}
+
+        {placedOrderId && (
+          <View style={styles.postOrderActions}>
+            <TouchableOpacity style={styles.postOrderPrimary} onPress={() => router.replace('/(tabs)/orders')}>
+              <ThemedText style={styles.postOrderPrimaryText}>View Orders</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.postOrderSecondary} onPress={() => router.replace('/(tabs)')}>
+              <ThemedText style={styles.postOrderSecondaryText}>Continue Shopping</ThemedText>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Shipping Address Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -209,14 +234,14 @@ export default function CheckoutScreen() {
                   {item.name} × {item.quantity}
                 </ThemedText>
                 <ThemedText style={styles.summaryItemPrice}>
-                  ${(parseFloat(String(item.price)) * item.quantity).toFixed(2)}
+                  {formatTk(parseFloat(String(item.price)) * item.quantity)}
                 </ThemedText>
               </View>
             ))}
             <View style={styles.divider} />
             <View style={styles.summaryRow}>
               <ThemedText style={styles.summaryLabel}>Subtotal ({getCartItemCount()} items)</ThemedText>
-              <ThemedText style={styles.summaryValue}>${subtotal.toFixed(2)}</ThemedText>
+              <ThemedText style={styles.summaryValue}>{formatTk(subtotal)}</ThemedText>
             </View>
             <View style={styles.summaryRow}>
               <ThemedText style={styles.summaryLabel}>Shipping</ThemedText>
@@ -225,7 +250,7 @@ export default function CheckoutScreen() {
             <View style={styles.divider} />
             <View style={styles.summaryRow}>
               <ThemedText style={styles.totalLabel}>Total</ThemedText>
-              <ThemedText style={styles.totalValue}>${total.toFixed(2)}</ThemedText>
+              <ThemedText style={styles.totalValue}>{formatTk(total)}</ThemedText>
             </View>
           </View>
         </View>
@@ -253,12 +278,12 @@ export default function CheckoutScreen() {
       {/* Place Order Button */}
       <View style={styles.footerContainer}>
         <View style={styles.footerRow}>
-          <ThemedText style={styles.footerTotal}>Total: ${total.toFixed(2)}</ThemedText>
+          <ThemedText style={styles.footerTotal}>Total: {formatTk(total)}</ThemedText>
         </View>
         <TouchableOpacity
-          style={[styles.placeOrderButton, isPlacing && { opacity: 0.7 }]}
+          style={[styles.placeOrderButton, (isPlacing || !!placedOrderId) && { opacity: 0.7 }]}
           onPress={handlePlaceOrder}
-          disabled={isPlacing}
+          disabled={isPlacing || !!placedOrderId}
         >
           {isPlacing ? (
             <ActivityIndicator color={ShopFlareColors.secondary} />
@@ -289,6 +314,39 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: ShopFlareColors.secondary },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { flex: 1, padding: 16 },
+  messageWrap: { marginBottom: 8 },
+  postOrderActions: {
+    backgroundColor: ShopFlareColors.secondary,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: ShopFlareColors.borderLight,
+    gap: 10,
+  },
+  postOrderPrimary: {
+    backgroundColor: ShopFlareColors.accent,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  postOrderPrimaryText: {
+    color: ShopFlareColors.secondary,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  postOrderSecondary: {
+    borderWidth: 1,
+    borderColor: ShopFlareColors.accent,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  postOrderSecondaryText: {
+    color: ShopFlareColors.accent,
+    fontWeight: '700',
+    fontSize: 14,
+  },
 
   // Section
   section: { marginBottom: 20 },

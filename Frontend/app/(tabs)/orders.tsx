@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
 import { useState, useEffect, useCallback } from 'react';
 import { getOrders, getBrandOrders, cancelOrder, updateOrderStatus, Order } from '@/services/orderService';
+import { formatTk } from '@/utils/currency';
 
 export default function OrdersScreen() {
   const { user, accessToken } = useAuth();
@@ -170,7 +171,7 @@ export default function OrdersScreen() {
         </View>
 
         <View style={styles.orderFooter}>
-          <ThemedText style={styles.orderTotal}>${Number(item.total_amount).toFixed(2)}</ThemedText>
+          <ThemedText style={styles.orderTotal}>{formatTk(item.total_amount)}</ThemedText>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             {canCancel && (
               <TouchableOpacity

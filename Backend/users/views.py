@@ -7,20 +7,157 @@ from django.contrib.auth import authenticate, get_user_model
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from django.utils import timezone
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from datetime import timedelta
+import hashlib
+import secrets
 
 
 from .serializers import (UserSerializer, BrandSerializer, RegisterSerializer,
                           BrandRegisterSerializer, LoginSerializer,
+                          VerificationSendSerializer, VerificationConfirmSerializer,
+                          ForgotPasswordRequestSerializer, ForgotPasswordConfirmSerializer,
                           ProductSerializer, ProductCreateUpdateSerializer,
                           ProductImageSerializer, WishlistSerializer, CartItemSerializer,
                           ReviewSerializer, ReviewCreateSerializer,
                           MessageSerializer, AddressSerializer, ChangePasswordSerializer,
                           OrderSerializer, CheckoutSerializer, OrderStatusUpdateSerializer,
                           NotificationSerializer)
-from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address, Order, OrderItem, Notification
+from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address, Order, OrderItem, Notification, EmailVerificationCode, PasswordResetCode
 from .authentication import BrandUser
 
 User = get_user_model()
+
+VERIFICATION_CODE_LENGTH = 6
+VERIFICATION_CODE_EXPIRY_MINUTES = 10
+VERIFICATION_RESEND_COOLDOWN_SECONDS = 60
+VERIFICATION_MAX_ATTEMPTS = 5
+PASSWORD_RESET_CODE_EXPIRY_MINUTES = 10
+PASSWORD_RESET_RESEND_COOLDOWN_SECONDS = 60
+PASSWORD_RESET_MAX_ATTEMPTS = 5
+
+
+def _generate_verification_code():
+    return f"{secrets.randbelow(10 ** VERIFICATION_CODE_LENGTH):0{VERIFICATION_CODE_LENGTH}d}"
+
+
+def _hash_verification_code(code):
+    return hashlib.sha256(f"{code}:{settings.SECRET_KEY}".encode('utf-8')).hexdigest()
+
+
+def _send_verification_email(recipient_email, code):
+    subject = 'Verify your ShopFlare email'
+    message = (
+        f"Your ShopFlare verification code is {code}.\n\n"
+        f"It expires in {VERIFICATION_CODE_EXPIRY_MINUTES} minutes."
+    )
+    send_mail(
+        subject,
+        message,
+        getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@shopflare.com'),
+        [recipient_email],
+        fail_silently=False,
+    )
+
+
+def _send_account_created_email(recipient_email):
+    subject = 'Account created successfully'
+    message = (
+        'Your ShopFlare account has been created and your email is verified.\n\n'
+        'You can now log in and start exploring ShopFlare.'
+    )
+    send_mail(
+        subject,
+        message,
+        getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@shopflare.com'),
+        [recipient_email],
+        fail_silently=False,
+    )
+
+
+def _issue_verification_code(target, user_type):
+    code = _generate_verification_code()
+    code_hash = _hash_verification_code(code)
+    expires_at = timezone.now() + timedelta(minutes=VERIFICATION_CODE_EXPIRY_MINUTES)
+
+    if user_type == 'user':
+        EmailVerificationCode.objects.filter(user=target, is_used=False).update(is_used=True)
+        EmailVerificationCode.objects.create(
+            user=target,
+            code_hash=code_hash,
+            expires_at=expires_at,
+        )
+        recipient_email = target.email
+    else:
+        EmailVerificationCode.objects.filter(brand=target, is_used=False).update(is_used=True)
+        EmailVerificationCode.objects.create(
+            brand=target,
+            code_hash=code_hash,
+            expires_at=expires_at,
+        )
+        recipient_email = target.email
+
+    _send_verification_email(recipient_email, code)
+
+
+def _get_verification_target(email, user_type):
+    if user_type == 'user':
+        return User.objects.filter(email__iexact=email).first()
+    return Brand.objects.filter(email__iexact=email).first()
+
+
+def _get_account_by_email(email):
+    user = User.objects.filter(email__iexact=email).first()
+    if user:
+        return user, 'user'
+
+    brand = Brand.objects.filter(email__iexact=email).first()
+    if brand:
+        return brand, 'brand'
+
+    return None, None
+
+
+def _send_password_reset_email(recipient_email, code):
+    subject = 'Reset your ShopFlare password'
+    message = (
+        f"Your ShopFlare password reset code is {code}.\n\n"
+        f"It expires in {PASSWORD_RESET_CODE_EXPIRY_MINUTES} minutes."
+    )
+    send_mail(
+        subject,
+        message,
+        getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@shopflare.com'),
+        [recipient_email],
+        fail_silently=False,
+    )
+
+
+def _issue_password_reset_code(target, user_type):
+    code = _generate_verification_code()
+    code_hash = _hash_verification_code(code)
+    expires_at = timezone.now() + timedelta(minutes=PASSWORD_RESET_CODE_EXPIRY_MINUTES)
+
+    if user_type == 'user':
+        PasswordResetCode.objects.filter(user=target, is_used=False).update(is_used=True)
+        PasswordResetCode.objects.create(
+            user=target,
+            code_hash=code_hash,
+            expires_at=expires_at,
+        )
+    else:
+        PasswordResetCode.objects.filter(brand=target, is_used=False).update(is_used=True)
+        PasswordResetCode.objects.create(
+            brand=target,
+            code_hash=code_hash,
+            expires_at=expires_at,
+        )
+
+    _send_password_reset_email(target.email, code)
 
 
 def get_brand_from_request(request):
@@ -155,15 +292,14 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        
-        tokens = get_tokens_for_user(user)
-        user_data = UserSerializer(user).data
-        
+
+        _issue_verification_code(user, 'user')
+
         return Response({
-            'user': user_data,
-            'access': tokens['access'],
-            'refresh': tokens['refresh'],
-            'message': 'User registered successfully'
+            'message': 'Registration successful. Please verify your email before logging in.',
+            'requires_verification': True,
+            'email': user.email,
+            'user_type': 'user',
         }, status=status.HTTP_201_CREATED)
 
 
@@ -177,16 +313,220 @@ class BrandRegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         brand = serializer.save()
-        
-        tokens = get_tokens_for_brand(brand)
-        brand_data = BrandSerializer(brand).data
-        
+
+        _issue_verification_code(brand, 'brand')
+
         return Response({
-            'user': brand_data,
-            'access': tokens['access'],
-            'refresh': tokens['refresh'],
-            'message': 'Brand registered successfully'
+            'message': 'Brand registration successful. Please verify your email before logging in.',
+            'requires_verification': True,
+            'email': brand.email,
+            'user_type': 'brand',
         }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def send_verification_code_view(request):
+    """Send initial email verification code"""
+    serializer = VerificationSendSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    email = serializer.validated_data['email']
+    user_type = serializer.validated_data['user_type']
+    target = _get_verification_target(email, user_type)
+    if not target:
+        return Response({'detail': 'Account not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    is_verified = target.is_email_verified if user_type == 'user' else target.is_brand_verified
+    if is_verified:
+        return Response({'detail': 'Email already verified'}, status=status.HTTP_400_BAD_REQUEST)
+
+    _issue_verification_code(target, user_type)
+    return Response({'message': 'Verification code sent'})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def resend_verification_code_view(request):
+    """Resend email verification code with cooldown"""
+    serializer = VerificationSendSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    email = serializer.validated_data['email']
+    user_type = serializer.validated_data['user_type']
+    target = _get_verification_target(email, user_type)
+    if not target:
+        return Response({'detail': 'Account not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    is_verified = target.is_email_verified if user_type == 'user' else target.is_brand_verified
+    if is_verified:
+        return Response({'detail': 'Email already verified'}, status=status.HTTP_400_BAD_REQUEST)
+
+    now = timezone.now()
+    if user_type == 'user':
+        latest_code = EmailVerificationCode.objects.filter(user=target).order_by('-created_at').first()
+    else:
+        latest_code = EmailVerificationCode.objects.filter(brand=target).order_by('-created_at').first()
+
+    if latest_code:
+        elapsed_seconds = (now - latest_code.created_at).total_seconds()
+        if elapsed_seconds < VERIFICATION_RESEND_COOLDOWN_SECONDS:
+            return Response(
+                {
+                    'detail': 'Please wait before requesting another code.',
+                    'retry_after': int(VERIFICATION_RESEND_COOLDOWN_SECONDS - elapsed_seconds),
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+    _issue_verification_code(target, user_type)
+    return Response({'message': 'Verification code resent'})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_email_view(request):
+    """Verify email using 6-digit code"""
+    serializer = VerificationConfirmSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    email = serializer.validated_data['email']
+    user_type = serializer.validated_data['user_type']
+    code = serializer.validated_data['code']
+
+    target = _get_verification_target(email, user_type)
+    if not target:
+        return Response({'detail': 'Account not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if user_type == 'user':
+        verification = EmailVerificationCode.objects.filter(user=target, is_used=False).order_by('-created_at').first()
+    else:
+        verification = EmailVerificationCode.objects.filter(brand=target, is_used=False).order_by('-created_at').first()
+
+    if not verification:
+        return Response({'detail': 'No active verification code found'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if verification.expires_at < timezone.now():
+        verification.is_used = True
+        verification.save(update_fields=['is_used', 'updated_at'])
+        return Response({'detail': 'Verification code expired'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if verification.attempts >= VERIFICATION_MAX_ATTEMPTS:
+        verification.is_used = True
+        verification.save(update_fields=['is_used', 'updated_at'])
+        return Response({'detail': 'Too many invalid attempts. Request a new code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if verification.code_hash != _hash_verification_code(code):
+        verification.attempts += 1
+        verification.save(update_fields=['attempts', 'updated_at'])
+        return Response({'detail': 'Invalid verification code'}, status=status.HTTP_400_BAD_REQUEST)
+
+    verification.is_used = True
+    verification.save(update_fields=['is_used', 'updated_at'])
+
+    marked_verified = False
+    if user_type == 'user':
+        if not target.is_email_verified:
+            target.is_email_verified = True
+            target.save(update_fields=['is_email_verified'])
+            marked_verified = True
+    else:
+        if not target.is_brand_verified:
+            target.is_brand_verified = True
+            target.save(update_fields=['is_brand_verified'])
+            marked_verified = True
+
+    if marked_verified:
+        _send_account_created_email(target.email)
+
+    return Response({'message': 'Email verified successfully'})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def forgot_password_request_view(request):
+    """Send password reset code to account email"""
+    serializer = ForgotPasswordRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    email = serializer.validated_data['email']
+    target, user_type = _get_account_by_email(email)
+
+    # Do not reveal whether account exists
+    if not target:
+        return Response({'message': 'If the account exists, a reset code has been sent.'})
+
+    now = timezone.now()
+    if user_type == 'user':
+        latest_code = PasswordResetCode.objects.filter(user=target).order_by('-created_at').first()
+    else:
+        latest_code = PasswordResetCode.objects.filter(brand=target).order_by('-created_at').first()
+
+    if latest_code:
+        elapsed_seconds = (now - latest_code.created_at).total_seconds()
+        if elapsed_seconds < PASSWORD_RESET_RESEND_COOLDOWN_SECONDS:
+            return Response(
+                {
+                    'detail': 'Please wait before requesting another code.',
+                    'retry_after': int(PASSWORD_RESET_RESEND_COOLDOWN_SECONDS - elapsed_seconds),
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+    _issue_password_reset_code(target, user_type)
+    return Response({'message': 'If the account exists, a reset code has been sent.'})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def forgot_password_confirm_view(request):
+    """Confirm password reset code and set a new password"""
+    serializer = ForgotPasswordConfirmSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    email = serializer.validated_data['email']
+    code = serializer.validated_data['code']
+    new_password = serializer.validated_data['new_password']
+
+    target, user_type = _get_account_by_email(email)
+    if not target:
+        return Response({'detail': 'Invalid reset request'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if user_type == 'user':
+        reset_code = PasswordResetCode.objects.filter(user=target, is_used=False).order_by('-created_at').first()
+    else:
+        reset_code = PasswordResetCode.objects.filter(brand=target, is_used=False).order_by('-created_at').first()
+
+    if not reset_code:
+        return Response({'detail': 'No active reset code found'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if reset_code.expires_at < timezone.now():
+        reset_code.is_used = True
+        reset_code.save(update_fields=['is_used', 'updated_at'])
+        return Response({'detail': 'Reset code expired'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if reset_code.attempts >= PASSWORD_RESET_MAX_ATTEMPTS:
+        reset_code.is_used = True
+        reset_code.save(update_fields=['is_used', 'updated_at'])
+        return Response({'detail': 'Too many invalid attempts. Request a new code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if reset_code.code_hash != _hash_verification_code(code):
+        reset_code.attempts += 1
+        reset_code.save(update_fields=['attempts', 'updated_at'])
+        return Response({'detail': 'Invalid reset code'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        validate_password(new_password, target)
+    except ValidationError as exc:
+        return Response({'detail': ' '.join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
+
+    target.set_password(new_password)
+    target.save(update_fields=['password'])
+
+    reset_code.is_used = True
+    reset_code.save(update_fields=['is_used', 'updated_at'])
+
+    return Response({'message': 'Password reset successful. You can now log in.'})
 
 
 @api_view(['POST'])
@@ -208,6 +548,17 @@ def login_view(request):
                 {'detail': 'User account is disabled'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
+
+        if not user.is_email_verified:
+            return Response(
+                {
+                    'detail': 'Email not verified. Please verify your email before logging in.',
+                    'code': 'email_not_verified',
+                    'email': user.email,
+                    'user_type': 'user',
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
         
         tokens = get_tokens_for_user(user)
         user_data = UserSerializer(user).data
@@ -227,6 +578,17 @@ def login_view(request):
                 return Response(
                     {'detail': 'Brand account is disabled'},
                     status=status.HTTP_401_UNAUTHORIZED
+                )
+
+            if not brand.is_brand_verified:
+                return Response(
+                    {
+                        'detail': 'Email not verified. Please verify your email before logging in.',
+                        'code': 'email_not_verified',
+                        'email': brand.email,
+                        'user_type': 'brand',
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
                 )
             
             tokens = get_tokens_for_brand(brand)
@@ -249,6 +611,17 @@ def login_view(request):
                 return Response(
                     {'detail': 'Brand account is disabled'},
                     status=status.HTTP_401_UNAUTHORIZED
+                )
+
+            if not brand.is_brand_verified:
+                return Response(
+                    {
+                        'detail': 'Email not verified. Please verify your email before logging in.',
+                        'code': 'email_not_verified',
+                        'email': brand.email,
+                        'user_type': 'brand',
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
                 )
             
             tokens = get_tokens_for_brand(brand)

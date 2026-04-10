@@ -1,8 +1,8 @@
 // API configuration and service functions
 // For testing on physical device, replace 'localhost' with your machine's local IP (e.g., 192.168.x.x)
-//const API_BASE_URL = 'http://192.168.0.98:8000/api';  // Change this to your actual machine IP if needed
+const API_BASE_URL = 'http://192.168.0.98:8000/api';  // Change this to your actual machine IP if needed
 // API configuration and service functions
-const API_BASE_URL = 'https://shopflare-api-di4o.onrender.com/api';
+//const API_BASE_URL = 'https://shopflare-api-di4o.onrender.com/api';
 
 export type UserType = 'user' | 'brand';
 
@@ -27,6 +27,27 @@ export interface User {
 export interface AuthTokens {
   access: string;
   refresh: string;
+}
+
+export interface VerificationRequirement {
+  requires_verification: boolean;
+  email: string;
+  user_type: UserType;
+  message: string;
+}
+
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  data?: any;
+
+  constructor(message: string, status: number, code?: string, data?: any) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+    this.data = data;
+  }
 }
 
 export interface RegisterData {
@@ -54,8 +75,25 @@ export interface ChangePasswordData {
   new_password2: string;
 }
 
+export interface VerifyEmailData {
+  email: string;
+  user_type: UserType;
+  code: string;
+}
+
+export interface ForgotPasswordRequestData {
+  email: string;
+}
+
+export interface ForgotPasswordConfirmData {
+  email: string;
+  code: string;
+  new_password: string;
+  new_password2: string;
+}
+
 // Register new user or brand
-export const register = async (data: RegisterData): Promise<{ user: User; tokens: AuthTokens }> => {
+export const register = async (data: RegisterData): Promise<VerificationRequirement> => {
   // Use different endpoint for brand registration
   const endpoint = data.user_type === 'brand' 
     ? `${API_BASE_URL}/auth/register/brand/`
@@ -71,14 +109,11 @@ export const register = async (data: RegisterData): Promise<{ user: User; tokens
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(Object.values(error).flat().join(', '));
+    throw new ApiError(error.detail || Object.values(error).flat().join(', '), response.status, error.code, error);
   }
 
   const result = await response.json();
-  return {
-    user: result.user,
-    tokens: { access: result.access, refresh: result.refresh },
-  };
+  return result;
 };
 
 // Login user
@@ -96,10 +131,10 @@ export const login = async (data: LoginData): Promise<{ user: User; tokens: Auth
   if (!response.ok) {
     try {
       const error = JSON.parse(responseText);
-      throw new Error(error.detail || error.message || 'Login failed');
+      throw new ApiError(error.detail || error.message || 'Login failed', response.status, error.code, error);
     } catch (parseError) {
-      if (parseError instanceof Error && parseError.message.includes('Login failed')) throw parseError;
-      throw new Error(`Login failed with status ${response.status}`);
+      if (parseError instanceof ApiError) throw parseError;
+      throw new ApiError(`Login failed with status ${response.status}`, response.status);
     }
   }
 
@@ -112,6 +147,81 @@ export const login = async (data: LoginData): Promise<{ user: User; tokens: Auth
   } catch (parseError) {
     throw new Error('Invalid JSON response from server');
   }
+};
+
+export const verifyEmailCode = async (data: VerifyEmailData): Promise<{ message: string }> => {
+  const response = await fetch(`${API_BASE_URL}/auth/verify-email/confirm/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  const result = await response.json();
+  if (!response.ok) {
+    throw new ApiError(result.detail || 'Verification failed', response.status, result.code, result);
+  }
+
+  return result;
+};
+
+export const resendVerificationCode = async (
+  email: string,
+  userType: UserType,
+): Promise<{ message: string; retry_after?: number }> => {
+  const response = await fetch(`${API_BASE_URL}/auth/verify-email/resend/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, user_type: userType }),
+  });
+
+  const result = await response.json();
+  if (!response.ok) {
+    throw new ApiError(result.detail || 'Could not resend code', response.status, result.code, result);
+  }
+
+  return result;
+};
+
+export const requestPasswordResetCode = async (
+  data: ForgotPasswordRequestData,
+): Promise<{ message: string; retry_after?: number }> => {
+  const response = await fetch(`${API_BASE_URL}/auth/forgot-password/request/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  const result = await response.json();
+  if (!response.ok) {
+    throw new ApiError(result.detail || 'Could not send reset code', response.status, result.code, result);
+  }
+
+  return result;
+};
+
+export const confirmPasswordReset = async (
+  data: ForgotPasswordConfirmData,
+): Promise<{ message: string }> => {
+  const response = await fetch(`${API_BASE_URL}/auth/forgot-password/confirm/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  const result = await response.json();
+  if (!response.ok) {
+    throw new ApiError(result.detail || 'Could not reset password', response.status, result.code, result);
+  }
+
+  return result;
 };
 
 // Get current user info

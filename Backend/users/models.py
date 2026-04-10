@@ -367,3 +367,73 @@ class Notification(models.Model):
     def __str__(self):
         recipient = self.recipient_user or self.recipient_brand
         return f"{recipient}: {self.title}"
+
+
+class EmailVerificationCode(models.Model):
+    """One-time email verification code for customer and brand accounts"""
+
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='email_verification_codes',
+    )
+    brand = models.ForeignKey(
+        Brand,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='email_verification_codes',
+    )
+    code_hash = models.CharField(max_length=128)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    is_used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'email_verification_codes'
+        verbose_name = 'Email Verification Code'
+        verbose_name_plural = 'Email Verification Codes'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        recipient = self.user or self.brand
+        return f"Verification code for {recipient}"
+
+
+class PasswordResetCode(models.Model):
+    """One-time password reset code for customer and brand accounts"""
+
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='password_reset_codes',
+    )
+    brand = models.ForeignKey(
+        Brand,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='password_reset_codes',
+    )
+    code_hash = models.CharField(max_length=128)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    is_used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'password_reset_codes'
+        verbose_name = 'Password Reset Code'
+        verbose_name_plural = 'Password Reset Codes'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        recipient = self.user or self.brand
+        return f"Password reset code for {recipient}"
