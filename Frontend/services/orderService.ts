@@ -1,4 +1,7 @@
 import { API_BASE_URL } from './productService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const GUEST_ORDERS_KEY = 'guest_orders';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -36,6 +39,7 @@ export interface Order {
   items: OrderItem[];
   created_at: string;
   updated_at: string;
+  guest_access_token?: string | null;
 }
 
 export interface CheckoutData {
@@ -48,8 +52,32 @@ export interface CheckoutData {
   shipping_state?: string;
   shipping_postal_code?: string;
   shipping_country?: string;
+  shipping_cost?: number;
   payment_method: 'cod' | 'card' | 'wallet';
   notes?: string;
+}
+
+export interface GuestCheckoutItem {
+  product_id: number;
+  quantity: number;
+  selected_size?: string;
+  selected_color?: string;
+}
+
+export interface GuestCheckoutData {
+  guest_email: string;
+  shipping_full_name: string;
+  shipping_phone: string;
+  shipping_address_line1: string;
+  shipping_address_line2?: string;
+  shipping_city: string;
+  shipping_state?: string;
+  shipping_postal_code?: string;
+  shipping_country: string;
+  shipping_cost?: number;
+  payment_method: 'cod' | 'card' | 'wallet';
+  notes?: string;
+  items: GuestCheckoutItem[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -88,6 +116,47 @@ export const checkout = async (token: string, data: CheckoutData): Promise<Order
     headers: authHeaders(token),
     body: JSON.stringify(data),
   });
+  return handleResponse<Order>(res);
+};
+
+/** Place an order as guest */
+export const guestCheckout = async (data: GuestCheckoutData): Promise<Order> => {
+  const res = await fetch(`${API_BASE_URL}/auth/checkout/guest/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<Order>(res);
+};
+
+export interface GuestOrderRef {
+  id: number;
+  token: string;
+  created_at?: string;
+}
+
+export const saveGuestOrderRef = async (order: Order): Promise<void> => {
+  if (!order.id || !order.guest_access_token) return;
+  const existingRaw = await AsyncStorage.getItem(GUEST_ORDERS_KEY);
+  const existing: GuestOrderRef[] = existingRaw ? JSON.parse(existingRaw) : [];
+
+  const next: GuestOrderRef[] = [
+    { id: order.id, token: order.guest_access_token, created_at: order.created_at },
+    ...existing.filter((x) => x.id !== order.id),
+  ];
+
+  await AsyncStorage.setItem(GUEST_ORDERS_KEY, JSON.stringify(next.slice(0, 30)));
+};
+
+export const getGuestOrderRefs = async (): Promise<GuestOrderRef[]> => {
+  const raw = await AsyncStorage.getItem(GUEST_ORDERS_KEY);
+  return raw ? (JSON.parse(raw) as GuestOrderRef[]) : [];
+};
+
+export const getGuestOrderDetail = async (orderId: number, token: string): Promise<Order> => {
+  const res = await fetch(`${API_BASE_URL}/auth/orders/guest/${orderId}/?token=${encodeURIComponent(token)}`);
   return handleResponse<Order>(res);
 };
 

@@ -1,4 +1,4 @@
-import { StyleSheet, View, ScrollView, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { ThemedText } from '@/components/themed-text';
@@ -9,8 +9,9 @@ import { ShopFlareColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useFashion } from '@/context/FashionContext';
 import { getAddresses, Address } from '@/services/profileService';
-import { checkout, CheckoutData } from '@/services/orderService';
+import { checkout, guestCheckout, saveGuestOrderRef, CheckoutData, GuestCheckoutData } from '@/services/orderService';
 import { formatTk } from '@/utils/currency';
+import { calculateShippingCharge } from '@/utils/shipping';
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -26,9 +27,16 @@ export default function CheckoutScreen() {
   const [formMessage, setFormMessage] = useState('');
   const [messageType, setMessageType] = useState<'error' | 'success' | 'info'>('error');
   const [placedOrderId, setPlacedOrderId] = useState<number | null>(null);
+  const [guestEmail, setGuestEmail] = useState('');
+  const [guestFullName, setGuestFullName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+  const [guestAddressLine1, setGuestAddressLine1] = useState('');
+  const [guestCity, setGuestCity] = useState('');
+  const [guestPostalCode, setGuestPostalCode] = useState('');
+  const [guestCountry, setGuestCountry] = useState('Bangladesh');
 
   const subtotal = getTotalPrice();
-  const shipping = 0; // free shipping
+  const shipping = calculateShippingCharge(subtotal);
   const total = subtotal + shipping;
 
   useEffect(() => {
@@ -36,7 +44,10 @@ export default function CheckoutScreen() {
   }, []);
 
   const loadAddresses = async () => {
-    if (!accessToken) return;
+    if (!accessToken) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const data = await getAddresses(accessToken);
@@ -53,16 +64,8 @@ export default function CheckoutScreen() {
   };
 
   const handlePlaceOrder = async () => {
-    if (!accessToken) return;
-
     setFormMessage('');
     setPlacedOrderId(null);
-
-    if (!selectedAddressId) {
-      setMessageType('error');
-      setFormMessage('Please select or add a shipping address before placing your order.');
-      return;
-    }
 
     if (cart.length === 0) {
       setMessageType('error');
@@ -70,15 +73,102 @@ export default function CheckoutScreen() {
       return;
     }
 
+    if (accessToken && !selectedAddressId) {
+      setMessageType('error');
+      setFormMessage('Please select or add a shipping address before placing your order.');
+      return;
+    }
+
+    if (accessToken && selectedAddressId) {
+      const selectedAddress = addresses.find((addr) => addr.id === selectedAddressId);
+      if (!selectedAddress?.phone || !selectedAddress.phone.trim()) {
+        setMessageType('error');
+        setFormMessage('Phone number is required. Please update the selected address phone number.');
+        return;
+      }
+      if (!/^\d{11}$/.test(selectedAddress.phone.trim())) {
+        setMessageType('error');
+        setFormMessage('Phone number must be exactly 11 digits in selected address.');
+        return;
+      }
+    }
+
+    if (!accessToken) {
+      if (!guestEmail || !guestFullName || !guestPhone || !guestAddressLine1 || !guestCity || !guestCountry) {
+        setMessageType('error');
+        setFormMessage('Please fill all required guest shipping fields.');
+        return;
+      }
+
+      const productItems: GuestCheckoutData['items'] = [];
+      for (const item of cart) {
+        const productId = Number(item.id);
+        if (!Number.isFinite(productId)) {
+          continue;
+        }
+        productItems.push({
+          product_id: productId,
+          quantity: item.quantity,
+          selected_size: item.selectedSize || undefined,
+          selected_color: item.selectedColor || undefined,
+        });
+      }
+
+      if (productItems.length === 0) {
+        setMessageType('error');
+        setFormMessage('Your cart has invalid items. Please refresh and try again.');
+        return;
+      }
+
+      if (!/^\d{11}$/.test(guestPhone.trim())) {
+        setMessageType('error');
+        setFormMessage('Phone number must be exactly 11 digits.');
+        return;
+      }
+    }
+
     setIsPlacing(true);
     try {
-      const checkoutData: CheckoutData = {
-        address_id: selectedAddressId,
-        payment_method: paymentMethod,
-        notes: notes.trim() || undefined,
-      };
+      let order;
 
-      const order = await checkout(accessToken, checkoutData);
+      if (accessToken) {
+        const checkoutData: CheckoutData = {
+          address_id: selectedAddressId!,
+          payment_method: paymentMethod,
+          notes: notes.trim() || undefined,
+        };
+        order = await checkout(accessToken, checkoutData);
+      } else {
+        const guestData: GuestCheckoutData = {
+          guest_email: guestEmail,
+          shipping_full_name: guestFullName,
+          shipping_phone: guestPhone,
+          shipping_address_line1: guestAddressLine1,
+          shipping_city: guestCity,
+          shipping_postal_code: guestPostalCode || undefined,
+          shipping_country: guestCountry,
+          payment_method: paymentMethod,
+          notes: notes.trim() || undefined,
+          items: (() => {
+            const safeItems: GuestCheckoutData['items'] = [];
+            for (const item of cart) {
+              const productId = Number(item.id);
+              if (!Number.isFinite(productId)) {
+                continue;
+              }
+              safeItems.push({
+                product_id: productId,
+                quantity: item.quantity,
+                selected_size: item.selectedSize || undefined,
+                selected_color: item.selectedColor || undefined,
+              });
+            }
+            return safeItems;
+          })(),
+        };
+
+        order = await guestCheckout(guestData);
+      }
 
       // Cart is already cleared by the backend; refresh local state
       await clearCart();
@@ -87,6 +177,17 @@ export default function CheckoutScreen() {
       setPlacedOrderId(order.id);
       setMessageType('success');
       setFormMessage(`Your order #${order.id} has been placed successfully.`);
+
+      if (accessToken) {
+        router.replace(`/orderDetail?id=${order.id}`);
+        return;
+      }
+
+      await saveGuestOrderRef(order);
+      if (order.guest_access_token) {
+        router.replace(`/orderDetail?id=${order.id}&guestToken=${encodeURIComponent(order.guest_access_token)}`);
+        return;
+      }
     } catch (err: any) {
       setMessageType('error');
       setFormMessage(err.message || 'Checkout failed. Something went wrong.');
@@ -103,22 +204,33 @@ export default function CheckoutScreen() {
 
   if (isLoading) {
     return (
-      <ThemedView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={ShopFlareColors.secondary} />
-          </TouchableOpacity>
-          <ThemedText style={styles.headerTitle}>Checkout</ThemedText>
-          <View style={{ width: 40 }} />
-        </View>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={ShopFlareColors.primary} />
-        </View>
-      </ThemedView>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+      >
+        <ThemedView style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color={ShopFlareColors.secondary} />
+            </TouchableOpacity>
+            <ThemedText style={styles.headerTitle}>Checkout</ThemedText>
+            <View style={{ width: 40 }} />
+          </View>
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={ShopFlareColors.primary} />
+          </View>
+        </ThemedView>
+      </KeyboardAvoidingView>
     );
   }
 
   return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+    >
     <ThemedView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -129,14 +241,19 @@ export default function CheckoutScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         {!!formMessage && (
           <View style={styles.messageWrap}>
             <InlineMessage message={formMessage} variant={messageType} />
           </View>
         )}
 
-        {placedOrderId && (
+        {placedOrderId && accessToken && (
           <View style={styles.postOrderActions}>
             <TouchableOpacity style={styles.postOrderPrimary} onPress={() => router.replace('/(tabs)/orders')}>
               <ThemedText style={styles.postOrderPrimaryText}>View Orders</ThemedText>
@@ -151,10 +268,65 @@ export default function CheckoutScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="location-outline" size={20} color={ShopFlareColors.primary} />
-            <ThemedText style={styles.sectionTitle}>Shipping Address</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{accessToken ? 'Shipping Address' : 'Guest Shipping Details'}</ThemedText>
           </View>
 
-          {addresses.length === 0 ? (
+          {!accessToken ? (
+            <View style={styles.guestFormCard}>
+              <TextInput
+                style={styles.guestInput}
+                placeholder="Email *"
+                placeholderTextColor={ShopFlareColors.textLight}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={guestEmail}
+                onChangeText={setGuestEmail}
+              />
+              <TextInput
+                style={styles.guestInput}
+                placeholder="Full Name *"
+                placeholderTextColor={ShopFlareColors.textLight}
+                value={guestFullName}
+                onChangeText={setGuestFullName}
+              />
+              <TextInput
+                style={styles.guestInput}
+                placeholder="Phone *"
+                placeholderTextColor={ShopFlareColors.textLight}
+                value={guestPhone}
+                onChangeText={setGuestPhone}
+                keyboardType="phone-pad"
+              />
+              <TextInput
+                style={styles.guestInput}
+                placeholder="Address Line 1 *"
+                placeholderTextColor={ShopFlareColors.textLight}
+                value={guestAddressLine1}
+                onChangeText={setGuestAddressLine1}
+              />
+              <TextInput
+                style={styles.guestInput}
+                placeholder="City *"
+                placeholderTextColor={ShopFlareColors.textLight}
+                value={guestCity}
+                onChangeText={setGuestCity}
+              />
+              <TextInput
+                style={styles.guestInput}
+                placeholder="Postal Code"
+                placeholderTextColor={ShopFlareColors.textLight}
+                value={guestPostalCode}
+                onChangeText={setGuestPostalCode}
+              />
+              <TextInput
+                style={styles.guestInput}
+                placeholder="Country *"
+                placeholderTextColor={ShopFlareColors.textLight}
+                value={guestCountry}
+                onChangeText={setGuestCountry}
+              />
+            </View>
+          ) : addresses.length === 0 ? (
             <TouchableOpacity style={styles.addAddressCard} onPress={() => router.push('/addresses')}>
               <Ionicons name="add-circle-outline" size={32} color={ShopFlareColors.primary} />
               <ThemedText style={styles.addAddressText}>Add a shipping address</ThemedText>
@@ -186,11 +358,9 @@ export default function CheckoutScreen() {
                     </View>
                   </View>
                   <ThemedText style={styles.addressLine}>{addr.address_line1}</ThemedText>
-                  {addr.address_line2 ? <ThemedText style={styles.addressLine}>{addr.address_line2}</ThemedText> : null}
                   <ThemedText style={styles.addressLine}>
-                    {addr.city}{addr.state ? `, ${addr.state}` : ''} {addr.postal_code || ''}
+                    {addr.city}{addr.postal_code ? `, ${addr.postal_code}` : ''}
                   </ThemedText>
-                  <ThemedText style={styles.addressLine}>{addr.country}</ThemedText>
                   {addr.phone ? <ThemedText style={styles.addressPhone}>{addr.phone}</ThemedText> : null}
                 </View>
               </TouchableOpacity>
@@ -245,7 +415,7 @@ export default function CheckoutScreen() {
             </View>
             <View style={styles.summaryRow}>
               <ThemedText style={styles.summaryLabel}>Shipping</ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: ShopFlareColors.success }]}>FREE</ThemedText>
+              <ThemedText style={styles.summaryValue}>{shipping === 0 ? 'FREE' : formatTk(shipping)}</ThemedText>
             </View>
             <View style={styles.divider} />
             <View style={styles.summaryRow}>
@@ -296,6 +466,7 @@ export default function CheckoutScreen() {
         </TouchableOpacity>
       </View>
     </ThemedView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -365,6 +536,24 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   addAddressText: { marginTop: 8, color: ShopFlareColors.primary, fontWeight: '600' },
+  guestFormCard: {
+    backgroundColor: ShopFlareColors.secondary,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: ShopFlareColors.borderLight,
+    gap: 10,
+  },
+  guestInput: {
+    backgroundColor: ShopFlareColors.background,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: ShopFlareColors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: ShopFlareColors.text,
+    fontSize: 14,
+  },
   addressCard: {
     backgroundColor: ShopFlareColors.secondary,
     borderRadius: 14,

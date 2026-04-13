@@ -1,4 +1,4 @@
-import { StyleSheet, View, ScrollView, TouchableOpacity, TextInput, FlatList, ActivityIndicator, Alert, Dimensions, NativeSyntheticEvent, NativeScrollEvent, RefreshControl } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, TextInput, FlatList, ActivityIndicator, Alert, Dimensions, NativeSyntheticEvent, NativeScrollEvent, RefreshControl, KeyboardAvoidingView, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
@@ -246,6 +246,11 @@ export default function ProductDetailScreen() {
   const productImages = getProductImages();
 
   return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+    >
     <ThemedView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -263,6 +268,7 @@ export default function ProductDetailScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -322,6 +328,7 @@ export default function ProductDetailScreen() {
           pagingEnabled
           showsHorizontalScrollIndicator={false}
           scrollEnabled={true}
+          keyboardShouldPersistTaps="handled"
           keyExtractor={(item) => item.toString()}
           onMomentumScrollEnd={(event: NativeSyntheticEvent<NativeScrollEvent>) => {
             const index = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
@@ -587,6 +594,8 @@ export default function ProductDetailScreen() {
                         value={reviewComment}
                         onChangeText={setReviewComment}
                         multiline
+                        textAlignVertical="top"
+                        blurOnSubmit={false}
                         maxLength={500}
                       />
                       <TouchableOpacity 
@@ -610,6 +619,7 @@ export default function ProductDetailScreen() {
       </ScrollView>
 
     </ThemedView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -1007,6 +1017,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 18,
     paddingVertical: 12,
+    minHeight: 44,
     maxHeight: 100,
     fontSize: 14,
     backgroundColor: ShopFlareColors.background,

@@ -55,6 +55,10 @@ export default function ProfileScreen() {
           <TouchableOpacity style={styles.signupButton} onPress={() => router.push('/register')}>
             <Text style={styles.signupButtonText}>Sign Up</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.guestOrdersButton} onPress={() => router.push('/(tabs)/orders')}>
+            <Ionicons name="bag-handle-outline" size={18} color={ShopFlareColors.info} />
+            <Text style={styles.guestOrdersButtonText}>View Orders</Text>
+          </TouchableOpacity>
         </View>
       </ThemedView>
     );
@@ -288,6 +292,25 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     width: '100%',
     alignItems: 'center',
+  },
+  guestOrdersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: ShopFlareColors.info,
+    backgroundColor: ShopFlareColors.infoLight,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    width: '100%',
+    marginTop: 20,
+  },
+  guestOrdersButtonText: {
+    color: ShopFlareColors.info,
+    fontSize: 15,
+    fontWeight: '600',
   },
   buttonText: { color: ShopFlareColors.secondary, fontSize: 16, fontWeight: '600' },
   signupButtonText: { fontSize: 16, fontWeight: '600', color: ShopFlareColors.accent },

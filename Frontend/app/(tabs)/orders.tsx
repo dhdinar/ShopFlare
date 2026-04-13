@@ -6,7 +6,15 @@ import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
 import { useState, useEffect, useCallback } from 'react';
-import { getOrders, getBrandOrders, cancelOrder, updateOrderStatus, Order } from '@/services/orderService';
+import {
+  getOrders,
+  getBrandOrders,
+  getGuestOrderRefs,
+  getGuestOrderDetail,
+  cancelOrder,
+  updateOrderStatus,
+  Order,
+} from '@/services/orderService';
 import { formatTk } from '@/utils/currency';
 
 export default function OrdersScreen() {
@@ -21,8 +29,12 @@ export default function OrdersScreen() {
   const isBrand = user?.user_type === 'brand';
 
   useEffect(() => {
-    if (accessToken) fetchOrders();
-  }, [accessToken]);
+    if (accessToken) {
+      fetchOrders();
+    } else {
+      fetchGuestOrders();
+    }
+  }, [accessToken, isBrand]);
 
   const fetchOrders = useCallback(async () => {
     if (!accessToken) return;
@@ -37,14 +49,47 @@ export default function OrdersScreen() {
     }
   }, [accessToken, isBrand]);
 
+  const fetchGuestOrders = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const refs = await getGuestOrderRefs();
+      if (refs.length === 0) {
+        setOrders([]);
+        return;
+      }
+
+      const fetched = await Promise.all(
+        refs.map(async (ref) => {
+          try {
+            return await getGuestOrderDetail(ref.id, ref.token);
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      const guestOrders = fetched.filter((order): order is Order => !!order);
+      setOrders(guestOrders);
+    } catch (err) {
+      console.error('Failed to fetch guest orders:', err);
+      setOrders([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await fetchOrders();
+      if (accessToken) {
+        await fetchOrders();
+      } else {
+        await fetchGuestOrders();
+      }
     } finally {
       setRefreshing(false);
     }
-  }, [fetchOrders]);
+  }, [accessToken, fetchGuestOrders, fetchOrders]);
 
   const filters = [
     { key: 'all', label: 'All' },
@@ -139,7 +184,13 @@ export default function OrdersScreen() {
     return (
       <TouchableOpacity
         style={styles.orderCard}
-        onPress={() => router.push(`/orderDetail?id=${item.id}`)}
+        onPress={() => {
+          if (!accessToken && item.guest_access_token) {
+            router.push(`/orderDetail?id=${item.id}&guestToken=${item.guest_access_token}`);
+            return;
+          }
+          router.push(`/orderDetail?id=${item.id}`);
+        }}
         activeOpacity={0.7}
       >
         <View style={styles.orderHeader}>
@@ -202,11 +253,38 @@ export default function OrdersScreen() {
   if (!accessToken) {
     return (
       <ThemedView style={styles.container}>
-        <View style={styles.emptyContainer}>
-          <Ionicons name="log-in-outline" size={64} color={ShopFlareColors.border} />
-          <ThemedText style={styles.emptyTitle}>Sign in</ThemedText>
-          <ThemedText style={styles.emptyMessage}>Sign in to view your orders</ThemedText>
+        <View style={styles.header}>
+          <ThemedText style={styles.headerTitle}>My Orders</ThemedText>
+          <TouchableOpacity style={styles.refreshButton} onPress={fetchGuestOrders}>
+            <Ionicons name="refresh" size={22} color={ShopFlareColors.primary} />
+          </TouchableOpacity>
         </View>
+
+        {isLoading ? (
+          <ActivityIndicator size="large" color={ShopFlareColors.primary} style={{ marginTop: 40 }} />
+        ) : orders.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="receipt-outline" size={64} color={ShopFlareColors.border} />
+            <ThemedText style={styles.emptyTitle}>No guest orders found</ThemedText>
+            <ThemedText style={styles.emptyMessage}>Place an order to see it here, or sign in to view account orders</ThemedText>
+          </View>
+        ) : (
+          <FlatList
+            data={orders}
+            keyExtractor={item => String(item.id)}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={ShopFlareColors.primary}
+                colors={[ShopFlareColors.primary]}
+              />
+            }
+            contentContainerStyle={styles.orderList}
+            showsVerticalScrollIndicator={false}
+            renderItem={renderOrder}
+          />
+        )}
       </ThemedView>
     );
   }

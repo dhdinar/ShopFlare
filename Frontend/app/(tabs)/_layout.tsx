@@ -6,10 +6,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { HapticTab } from '@/components/haptic-tab';
 import { ShopFlareColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useFashion } from '@/context/FashionContext';
 
 export default function TabLayout() {
   const { user } = useAuth();
+  const { getCartItemCount, wishlist } = useFashion();
   const isBrand = user?.user_type === 'brand';
+  const cartCount = getCartItemCount();
+  const wishlistCount = wishlist.length;
 
   return (
     <Tabs
@@ -54,6 +58,13 @@ export default function TabLayout() {
         options={{
           title: 'Wishlist',
           href: isBrand ? null : '/wishlist',
+          tabBarBadge: !isBrand && wishlistCount > 0 ? (wishlistCount > 99 ? '99+' : wishlistCount) : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: ShopFlareColors.error,
+            color: ShopFlareColors.secondary,
+            fontSize: 10,
+            fontWeight: '700',
+          },
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'heart' : 'heart-outline'} size={26} color={color} />
           ),
@@ -64,6 +75,13 @@ export default function TabLayout() {
         options={{
           title: 'Cart',
           href: isBrand ? null : '/cart',
+          tabBarBadge: !isBrand && cartCount > 0 ? (cartCount > 99 ? '99+' : cartCount) : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: ShopFlareColors.error,
+            color: ShopFlareColors.secondary,
+            fontSize: 10,
+            fontWeight: '700',
+          },
           tabBarIcon: ({ color, focused }) => (
             <View style={styles.cartIconContainer}>
               <View style={[styles.cartIconBg, focused && styles.cartIconBgActive]}>

@@ -164,7 +164,7 @@ class CartItem(models.Model):
     selected_color = models.CharField(max_length=50, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         db_table = 'cart_items'
         verbose_name = 'Cart Item'
@@ -187,11 +187,8 @@ class Address(models.Model):
     full_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20, blank=True, null=True)
     address_line1 = models.CharField(max_length=255)
-    address_line2 = models.CharField(max_length=255, blank=True, null=True)
     city = models.CharField(max_length=100)
-    state = models.CharField(max_length=100, blank=True, null=True)
     postal_code = models.CharField(max_length=20, blank=True, null=True)
-    country = models.CharField(max_length=100, default='')
     is_default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -230,7 +227,10 @@ class Order(models.Model):
         ('wallet', 'Wallet'),
     ]
 
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='orders')
+    user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, related_name='orders', null=True, blank=True)
+    guest_checkout = models.BooleanField(default=False)
+    guest_email = models.EmailField(blank=True, null=True)
+    guest_access_token = models.CharField(max_length=64, blank=True, null=True, db_index=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='cod')
     payment_status = models.CharField(max_length=20, default='pending')  # pending / paid / failed
@@ -260,7 +260,11 @@ class Order(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"Order #{self.id} by {self.user.username} - {self.status}"
+        if self.user:
+            owner = self.user.username
+        else:
+            owner = self.guest_email or 'Guest'
+        return f"Order #{self.id} by {owner} - {self.status}"
 
 
 class OrderItem(models.Model):

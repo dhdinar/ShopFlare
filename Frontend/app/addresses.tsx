@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { ThemedText } from '@/components/themed-text';
+import InlineMessage from '@/components/ui/inline-message';
 import { ShopFlareColors } from '@/constants/theme';
 import * as profileService from '@/services/profileService';
 import { Address, AddressInput } from '@/services/profileService';
@@ -31,12 +32,8 @@ const EMPTY_FORM: AddressInput = {
   label: 'home',
   full_name: '',
   phone: '',
-  address_line1: '',
-  address_line2: '',
   city: '',
-  state: '',
   postal_code: '',
-  country: '',
   is_default: false,
 };
 
@@ -51,6 +48,9 @@ export default function AddressesScreen() {
   const [form, setForm] = useState<AddressInput>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [formMessage, setFormMessage] = useState('');
+  const [formMessageType, setFormMessageType] = useState<'error' | 'success' | 'info'>('error');
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'full_name' | 'phone' | 'address_line1' | 'city' | 'postal_code', string>>>({});
 
   const loadAddresses = useCallback(async () => {
     if (!accessToken) return;
@@ -72,6 +72,8 @@ export default function AddressesScreen() {
   const openAdd = () => {
     setEditingAddress(null);
     setForm(EMPTY_FORM);
+    setFormMessage('');
+    setFieldErrors({});
     setModalVisible(true);
   };
 
@@ -82,22 +84,40 @@ export default function AddressesScreen() {
       full_name: addr.full_name,
       phone: addr.phone || '',
       address_line1: addr.address_line1,
-      address_line2: addr.address_line2 || '',
       city: addr.city,
-      state: addr.state || '',
       postal_code: addr.postal_code || '',
-      country: addr.country,
       is_default: addr.is_default,
     });
+    setFormMessage('');
+    setFieldErrors({});
     setModalVisible(true);
   };
 
   const handleSave = async () => {
     if (!accessToken) return;
-    if (!form.full_name.trim() || !form.address_line1.trim() || !form.city.trim()) {
-      Alert.alert('Validation', 'Full name, address line 1, and city are required');
+    setFormMessage('');
+    const nextFieldErrors: Partial<Record<'full_name' | 'phone' | 'address_line1' | 'city' | 'postal_code', string>> = {};
+
+    if (!form.full_name.trim()) {
+      nextFieldErrors.full_name = 'Full name is required.';
+    }
+    if (!form.phone?.trim()) {
+      nextFieldErrors.phone = 'Phone number is required.';
+    } else if (!/^[0-9]{11}$/.test(form.phone.trim())) {
+      nextFieldErrors.phone = 'Phone number must be exactly 11 digits.';
+    }
+    if (!form.address_line1.trim()) {
+      nextFieldErrors.address_line1 = 'Address line 1 is required.';
+    }
+    if (!form.city.trim()) {
+      nextFieldErrors.city = 'City is required.';
+    }
+
+    setFieldErrors(nextFieldErrors);
+    if (Object.keys(nextFieldErrors).length > 0) {
       return;
     }
+
     setSaving(true);
     try {
       if (editingAddress) {
@@ -113,7 +133,8 @@ export default function AddressesScreen() {
       }
       setModalVisible(false);
     } catch (e: any) {
-      Alert.alert('Error', e.message || 'Failed to save address');
+      setFormMessageType('error');
+      setFormMessage(e.message || 'Failed to save address.');
     } finally {
       setSaving(false);
     }
@@ -165,13 +186,9 @@ export default function AddressesScreen() {
       </View>
       <ThemedText style={styles.cardName}>{item.full_name}</ThemedText>
       <ThemedText style={styles.cardText}>{item.address_line1}</ThemedText>
-      {item.address_line2 ? (
-        <ThemedText style={styles.cardText}>{item.address_line2}</ThemedText>
-      ) : null}
       <ThemedText style={styles.cardText}>
-        {[item.city, item.state, item.postal_code].filter(Boolean).join(', ')}
+        {[item.city, item.postal_code].filter(Boolean).join(', ')}
       </ThemedText>
-      <ThemedText style={styles.cardText}>{item.country}</ThemedText>
       {item.phone && <ThemedText style={styles.cardPhone}>{item.phone}</ThemedText>}
 
       <View style={styles.cardActions}>
@@ -189,7 +206,6 @@ export default function AddressesScreen() {
           <ThemedText style={styles.actionBtnText}>Edit</ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.actionBtn, styles.deleteBtn]}
           onPress={() => handleDelete(item)}
         >
           <Ionicons name="trash-outline" size={16} color={ShopFlareColors.error} />
@@ -267,6 +283,12 @@ export default function AddressesScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
+              {!!formMessage && (
+                <View style={styles.inlineMessageWrap}>
+                  <InlineMessage message={formMessage} variant={formMessageType} />
+                </View>
+              )}
+
               {/* Label selector */}
               <ThemedText style={styles.label}>Label</ThemedText>
               <View style={styles.labelRow}>
@@ -286,11 +308,9 @@ export default function AddressesScreen() {
 
               {[
                 { key: 'full_name', label: 'Full Name *', placeholder: 'Recipient full name' },
-                { key: 'phone', label: 'Phone', placeholder: 'Phone number' },
+                { key: 'phone', label: 'Phone *', placeholder: 'Phone number' },
                 { key: 'address_line1', label: 'Address Line 1 *', placeholder: 'Street address' },
-                { key: 'address_line2', label: 'Address Line 2', placeholder: 'Apartment, suite, etc.' },
                 { key: 'city', label: 'City *', placeholder: 'City' },
-                { key: 'state', label: 'State / Province', placeholder: 'State' },
                 { key: 'postal_code', label: 'Postal Code', placeholder: 'ZIP / Postal code' },
                 { key: 'country', label: 'Country', placeholder: 'Country' },
               ].map(field => (
@@ -299,10 +319,19 @@ export default function AddressesScreen() {
                   <TextInput
                     style={styles.input}
                     value={(form as any)[field.key] || ''}
-                    onChangeText={text => setForm(f => ({ ...f, [field.key]: text }))}
+                    onChangeText={text => {
+                      setForm(f => ({ ...f, [field.key]: text }));
+                      if ((fieldErrors as any)[field.key]) {
+                        setFieldErrors(prev => ({ ...prev, [field.key]: '' }));
+                      }
+                    }}
                     placeholder={field.placeholder}
                     placeholderTextColor={ShopFlareColors.textLight}
+                    keyboardType={field.key === 'phone' ? 'phone-pad' : 'default'}
                   />
+                  {!!(fieldErrors as any)[field.key] && (
+                    <ThemedText style={styles.fieldErrorText}>{(fieldErrors as any)[field.key]}</ThemedText>
+                  )}
                 </View>
               ))}
 
@@ -438,8 +467,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: { fontSize: 18, fontWeight: '700' },
+  inlineMessageWrap: { marginBottom: 12 },
   fieldGroup: { marginBottom: 14 },
   label: { fontSize: 13, fontWeight: '600', color: ShopFlareColors.textSecondary, marginBottom: 5 },
+  fieldErrorText: {
+    color: ShopFlareColors.error,
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 2,
+    fontWeight: '500',
+  },
   input: {
     borderWidth: 1.5,
     borderColor: ShopFlareColors.border,

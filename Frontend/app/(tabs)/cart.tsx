@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { useFashion, CartItem } from '@/context/FashionContext';
 import { useState, useCallback } from 'react';
 import { formatTk } from '@/utils/currency';
+import { calculateShippingCharge } from '@/utils/shipping';
 
 // Category emojis for products without images
 const CATEGORY_EMOJIS: Record<string, string> = {
@@ -58,7 +59,7 @@ export default function CartScreen() {
   };
 
   const subtotal = getTotalPrice();
-  const shipping = subtotal > 100 ? 0 : 9.99;
+  const shipping = calculateShippingCharge(subtotal);
   const total = subtotal + shipping;
   const totalItems = getCartItemCount();
 

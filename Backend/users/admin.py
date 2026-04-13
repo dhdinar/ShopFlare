@@ -130,9 +130,9 @@ class MessageAdmin(admin.ModelAdmin):
 
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'label', 'full_name', 'city', 'country', 'is_default', 'created_at']
-    list_filter = ['label', 'is_default', 'country', 'created_at']
-    search_fields = ['user__username', 'full_name', 'address_line1', 'city', 'country']
+    list_display = ['id', 'user', 'label', 'full_name', 'city', 'is_default', 'created_at']
+    list_filter = ['label', 'is_default', 'created_at']
+    search_fields = ['user__username', 'full_name', 'address_line1', 'city']
     readonly_fields = ['created_at', 'updated_at']
     ordering = ['user', '-is_default', '-created_at']
 

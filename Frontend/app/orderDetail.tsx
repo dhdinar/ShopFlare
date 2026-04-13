@@ -6,11 +6,11 @@ import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { getOrder, getBrandOrder, cancelOrder, Order } from '@/services/orderService';
+import { getOrder, getBrandOrder, getGuestOrderDetail, cancelOrder, Order } from '@/services/orderService';
 import { formatTk } from '@/utils/currency';
 
 export default function OrderDetailScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, guestToken } = useLocalSearchParams<{ id?: string | string[]; guestToken?: string | string[] }>();
   const router = useRouter();
   const { accessToken, user } = useAuth();
 
@@ -22,20 +22,31 @@ export default function OrderDetailScreen() {
 
   useEffect(() => {
     loadOrder();
-  }, [accessToken, id, isBrand]);
+  }, [accessToken, id, guestToken, isBrand]);
 
   const loadOrder = async () => {
     const orderId = Number(Array.isArray(id) ? id[0] : id);
-    if (!accessToken || !orderId || Number.isNaN(orderId)) {
+    const guestTokenValue = Array.isArray(guestToken) ? guestToken[0] : guestToken;
+
+    if (!orderId || Number.isNaN(orderId)) {
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
     try {
-      const data = isBrand
-        ? await getBrandOrder(accessToken, orderId)
-        : await getOrder(accessToken, orderId);
+      let data;
+      if (accessToken) {
+        data = isBrand
+          ? await getBrandOrder(accessToken, orderId)
+          : await getOrder(accessToken, orderId);
+      } else if (guestTokenValue) {
+        data = await getGuestOrderDetail(orderId, guestTokenValue);
+      } else {
+        setOrder(null);
+        setIsLoading(false);
+        return;
+      }
       setOrder(data);
     } catch (err: any) {
       setOrder(null);

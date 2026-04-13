@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+import re
 from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address, Order, OrderItem, Notification
 
 User = get_user_model()
@@ -295,12 +296,19 @@ class MessageSerializer(serializers.ModelSerializer):
 class AddressSerializer(serializers.ModelSerializer):
     """Serializer for user shipping addresses"""
 
+    phone = serializers.CharField(required=True, allow_blank=False)
+
+    def validate_phone(self, value):
+        if not re.fullmatch(r'\d{11}', value or ''):
+            raise serializers.ValidationError('Phone number must be exactly 11 digits.')
+        return value
+
     class Meta:
         model = Address
         fields = [
             'id', 'label', 'full_name', 'phone',
-            'address_line1', 'address_line2',
-            'city', 'state', 'postal_code', 'country',
+            'address_line1',
+            'city', 'postal_code',
             'is_default', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -333,19 +341,24 @@ class OrderItemSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     """Serializer for orders (read)"""
     items = OrderItemSerializer(many=True, read_only=True)
-    username = serializers.CharField(source='user.username', read_only=True)
+    username = serializers.SerializerMethodField()
+
+    def get_username(self, obj):
+        if obj.user:
+            return obj.user.username
+        return obj.guest_email or 'Guest'
 
     class Meta:
         model = Order
         fields = [
-            'id', 'username', 'status', 'payment_method', 'payment_status',
+            'id', 'username', 'guest_checkout', 'guest_email', 'guest_access_token', 'status', 'payment_method', 'payment_status',
             'shipping_full_name', 'shipping_phone',
             'shipping_address_line1', 'shipping_address_line2',
             'shipping_city', 'shipping_state', 'shipping_postal_code', 'shipping_country',
             'subtotal', 'shipping_cost', 'total_amount',
             'notes', 'items', 'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'username', 'subtotal', 'total_amount', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'username', 'guest_checkout', 'guest_email', 'guest_access_token', 'subtotal', 'total_amount', 'created_at', 'updated_at']
 
 
 class CheckoutSerializer(serializers.Serializer):
@@ -360,6 +373,7 @@ class CheckoutSerializer(serializers.Serializer):
     shipping_state = serializers.CharField(max_length=100, required=False, allow_blank=True)
     shipping_postal_code = serializers.CharField(max_length=20, required=False, allow_blank=True)
     shipping_country = serializers.CharField(max_length=100, required=False)
+    shipping_cost = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, min_value=0)
 
     payment_method = serializers.ChoiceField(choices=['cod', 'card', 'wallet'], default='cod')
     notes = serializers.CharField(required=False, allow_blank=True)
@@ -374,6 +388,39 @@ class CheckoutSerializer(serializers.Serializer):
                     f"Provide address_id or fill: {', '.join(missing)}"
                 )
         return attrs
+
+
+class GuestCheckoutItemSerializer(serializers.Serializer):
+    product_id = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1)
+    selected_size = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    selected_color = serializers.CharField(max_length=50, required=False, allow_blank=True)
+
+
+class GuestCheckoutSerializer(serializers.Serializer):
+    guest_email = serializers.EmailField(required=True)
+    shipping_full_name = serializers.CharField(max_length=100, required=True)
+    shipping_phone = serializers.CharField(max_length=20, required=True, allow_blank=False)
+    shipping_address_line1 = serializers.CharField(max_length=255, required=True)
+    shipping_address_line2 = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    shipping_city = serializers.CharField(max_length=100, required=True)
+    shipping_state = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    shipping_postal_code = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    shipping_country = serializers.CharField(max_length=100, required=True)
+    shipping_cost = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, min_value=0)
+    payment_method = serializers.ChoiceField(choices=['cod', 'card', 'wallet'], default='cod')
+    notes = serializers.CharField(required=False, allow_blank=True)
+    items = GuestCheckoutItemSerializer(many=True, required=True)
+
+    def validate_items(self, value):
+        if not value:
+            raise serializers.ValidationError('At least one item is required.')
+        return value
+
+    def validate_shipping_phone(self, value):
+        if not re.fullmatch(r'\d{11}', value or ''):
+            raise serializers.ValidationError('Phone number must be exactly 11 digits.')
+        return value
 
 
 class OrderStatusUpdateSerializer(serializers.Serializer):

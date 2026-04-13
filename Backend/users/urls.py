@@ -80,8 +80,10 @@ urlpatterns = [
 
     # Checkout & Orders (customer)
     path('checkout/', views.checkout_view, name='checkout'),
+    path('checkout/guest/', views.guest_checkout_view, name='guest_checkout'),
     path('orders/', views.order_list_view, name='order_list'),
     path('orders/<int:order_id>/', views.order_detail_view, name='order_detail'),
+    path('orders/guest/<int:order_id>/', views.guest_order_detail_view, name='guest_order_detail'),
     path('orders/<int:order_id>/cancel/', views.order_cancel_view, name='order_cancel'),
 
     # Orders (brand)

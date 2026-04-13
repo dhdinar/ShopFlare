@@ -25,7 +25,7 @@ from .serializers import (UserSerializer, BrandSerializer, RegisterSerializer,
                           ProductImageSerializer, WishlistSerializer, CartItemSerializer,
                           ReviewSerializer, ReviewCreateSerializer,
                           MessageSerializer, AddressSerializer, ChangePasswordSerializer,
-                          OrderSerializer, CheckoutSerializer, OrderStatusUpdateSerializer,
+                          OrderSerializer, CheckoutSerializer, GuestCheckoutSerializer, OrderStatusUpdateSerializer,
                           NotificationSerializer)
 from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address, Order, OrderItem, Notification, EmailVerificationCode, PasswordResetCode
 from .authentication import BrandUser
@@ -1707,6 +1707,105 @@ def health(request):
 # ==================== Checkout / Order Views ====================
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
+def guest_checkout_view(request):
+    """Place an order as guest without creating an account."""
+    from django.db import transaction
+    from decimal import Decimal
+
+    serializer = GuestCheckoutSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    data = serializer.validated_data
+
+    shipping = {
+        'shipping_full_name': data.get('shipping_full_name', ''),
+        'shipping_phone': data.get('shipping_phone', ''),
+        'shipping_address_line1': data.get('shipping_address_line1', ''),
+        'shipping_address_line2': data.get('shipping_address_line2', ''),
+        'shipping_city': data.get('shipping_city', ''),
+        'shipping_state': data.get('shipping_state', ''),
+        'shipping_postal_code': data.get('shipping_postal_code', ''),
+        'shipping_country': data.get('shipping_country', ''),
+    }
+
+    raw_items = data.get('items', [])
+    product_ids = [item['product_id'] for item in raw_items]
+    product_map = {
+        p.id: p for p in Product.objects.filter(id__in=product_ids, is_active=True).select_related('brand')
+    }
+
+    resolved_items = []
+    for raw_item in raw_items:
+        product = product_map.get(raw_item['product_id'])
+        if not product:
+            return Response(
+                {'detail': f"Product {raw_item['product_id']} not found or inactive"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        quantity = raw_item['quantity']
+        if product.stock < quantity:
+            return Response(
+                {'detail': f'Insufficient stock for "{product.name}". Available: {product.stock}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        resolved_items.append((product, raw_item))
+
+    subtotal = sum(
+        (product.sale_price if product.is_on_sale else product.price) * item['quantity']
+        for product, item in resolved_items
+    )
+    BASE_SHIPPING_COST = Decimal('60.00')
+    FREE_SHIPPING_THRESHOLD = Decimal('5000.00')
+    SHIPPING_COST = Decimal('0.00') if subtotal > FREE_SHIPPING_THRESHOLD else BASE_SHIPPING_COST
+    total_amount = subtotal + SHIPPING_COST
+
+    with transaction.atomic():
+        locked_products = {
+            p.id: p for p in Product.objects.select_for_update().filter(id__in=product_ids)
+        }
+
+        for product, item in resolved_items:
+            locked_product = locked_products[product.id]
+            if locked_product.stock < item['quantity']:
+                return Response(
+                    {'detail': f'Insufficient stock for "{locked_product.name}". Available: {locked_product.stock}'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        order = Order.objects.create(
+            user=None,
+            guest_checkout=True,
+            guest_email=data.get('guest_email'),
+            guest_access_token=secrets.token_urlsafe(24),
+            payment_method=data.get('payment_method', 'cod'),
+            notes=data.get('notes', ''),
+            subtotal=subtotal,
+            shipping_cost=SHIPPING_COST,
+            total_amount=total_amount,
+            **shipping,
+        )
+
+        for product, item in resolved_items:
+            locked_product = locked_products[product.id]
+            unit_price = locked_product.sale_price if locked_product.is_on_sale else locked_product.price
+            OrderItem.objects.create(
+                order=order,
+                product=locked_product,
+                brand=locked_product.brand,
+                product_name=locked_product.name,
+                product_price=unit_price,
+                quantity=item['quantity'],
+                selected_size=item.get('selected_size') or '',
+                selected_color=item.get('selected_color') or '',
+            )
+            locked_product.stock -= item['quantity']
+            locked_product.save(update_fields=['stock'])
+
+    return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def checkout_view(request):
     """Place an order from the user's current cart"""
@@ -1728,11 +1827,11 @@ def checkout_view(request):
             'shipping_full_name': addr.full_name,
             'shipping_phone': addr.phone or '',
             'shipping_address_line1': addr.address_line1,
-            'shipping_address_line2': addr.address_line2 or '',
+            'shipping_address_line2': '',
             'shipping_city': addr.city,
-            'shipping_state': addr.state or '',
+            'shipping_state': '',
             'shipping_postal_code': addr.postal_code or '',
-            'shipping_country': addr.country,
+            'shipping_country': '',
         }
     else:
         shipping = {
@@ -1759,11 +1858,13 @@ def checkout_view(request):
             )
 
     # Calculate totals
-    SHIPPING_COST = Decimal('0.00')
     subtotal = sum(
         (item.product.sale_price if item.product.is_on_sale else item.product.price) * item.quantity
         for item in cart_items
     )
+    BASE_SHIPPING_COST = Decimal('60.00')
+    FREE_SHIPPING_THRESHOLD = Decimal('5000.00')
+    SHIPPING_COST = Decimal('0.00') if subtotal > FREE_SHIPPING_THRESHOLD else BASE_SHIPPING_COST
     total_amount = subtotal + SHIPPING_COST
 
     # Use atomic transaction to prevent partial failures
@@ -1850,6 +1951,26 @@ def order_detail_view(request, order_id):
         order = Order.objects.prefetch_related('items').get(id=order_id, user=request.user)
     except Order.DoesNotExist:
         return Response({'detail': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+    return Response(OrderSerializer(order).data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def guest_order_detail_view(request, order_id):
+    """Get guest order details by order id and guest token."""
+    token = request.query_params.get('token')
+    if not token:
+        return Response({'detail': 'Guest token is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        order = Order.objects.prefetch_related('items').get(
+            id=order_id,
+            guest_checkout=True,
+            guest_access_token=token,
+        )
+    except Order.DoesNotExist:
+        return Response({'detail': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+
     return Response(OrderSerializer(order).data)
 
 
