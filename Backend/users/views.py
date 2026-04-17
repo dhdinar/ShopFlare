@@ -1521,7 +1521,7 @@ def notifications_mark_all_read_view(request):
     return Response({'updated': updated})
 
 
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 
 # ==================== Address Views ====================
 
@@ -1728,6 +1728,36 @@ def _resolve_payment_callback_url(request, path, configured_url=''):
     return f"{_get_public_base_url(request)}{path}"
 
 
+def _build_app_redirect_url(base_url, order_id=None, payment_status=None, transaction_id='', guest_token=''):
+    if not base_url:
+        return ''
+
+    parsed = urllib_parse.urlparse(base_url)
+    query_params = dict(urllib_parse.parse_qsl(parsed.query, keep_blank_values=True))
+    if order_id is not None:
+        query_params['id'] = str(order_id)
+    if payment_status:
+        query_params['payment_status'] = str(payment_status)
+    if transaction_id:
+        query_params['tran_id'] = str(transaction_id)
+    if guest_token:
+        query_params['guestToken'] = str(guest_token)
+
+    new_query = urllib_parse.urlencode(query_params)
+    return urllib_parse.urlunparse(parsed._replace(query=new_query))
+
+
+def _should_redirect_to_app(request):
+    if request.query_params.get('no_redirect') == '1':
+        return False
+
+    if request.method == 'GET':
+        return True
+
+    accept_header = request.META.get('HTTP_ACCEPT', '')
+    return 'text/html' in accept_header.lower()
+
+
 def _post_form(url, payload):
     encoded_payload = urllib_parse.urlencode(payload).encode('utf-8')
     req = urllib_request.Request(url, data=encoded_payload)
@@ -1832,12 +1862,16 @@ def _complete_paid_order(payment, gateway_val_id='', gateway_payload=None):
 
     order = payment.order
     if order.payment_status == 'paid':
+        if order.user_id:
+            CartItem.objects.filter(user=order.user).delete()
         return {'ok': True, 'already_paid': True}
 
     with transaction.atomic():
         locked_payment = SSLPayment.objects.select_for_update().select_related('order').get(id=payment.id)
         locked_order = locked_payment.order
         if locked_order.payment_status == 'paid' or locked_payment.status == 'paid':
+            if locked_order.user_id:
+                CartItem.objects.filter(user=locked_order.user).delete()
             return {'ok': True, 'already_paid': True}
 
         items = list(locked_order.items.select_related('product', 'brand'))
@@ -1971,7 +2005,7 @@ def guest_checkout_view(request):
 
     payment_method = data.get('payment_method', 'cod')
 
-    if payment_method in ('card', 'wallet'):
+    if payment_method == 'card':
         order = Order.objects.create(
             user=None,
             guest_checkout=True,
@@ -2008,11 +2042,8 @@ def guest_checkout_view(request):
 
         payment_init = _initialize_ssl_payment(request, order, payment)
         if not payment_init.get('ok'):
-            order.payment_status = 'failed'
-            order.status = 'cancelled'
-            order.save(update_fields=['payment_status', 'status', 'updated_at'])
-            payment.status = 'failed'
-            payment.save(update_fields=['status', 'updated_at'])
+            # If gateway init fails, treat it as no order placement for online flow.
+            order.delete()
             return Response({'detail': payment_init.get('error', 'Payment initialization failed.')}, status=status.HTTP_502_BAD_GATEWAY)
 
         return Response(
@@ -2132,7 +2163,7 @@ def checkout_view(request):
 
     payment_method = data.get('payment_method', 'cod')
 
-    if payment_method in ('card', 'wallet'):
+    if payment_method == 'card':
         order = Order.objects.create(
             user=request.user,
             payment_method=payment_method,
@@ -2166,11 +2197,8 @@ def checkout_view(request):
 
         payment_init = _initialize_ssl_payment(request, order, payment)
         if not payment_init.get('ok'):
-            order.payment_status = 'failed'
-            order.status = 'cancelled'
-            order.save(update_fields=['payment_status', 'status', 'updated_at'])
-            payment.status = 'failed'
-            payment.save(update_fields=['status', 'updated_at'])
+            # If gateway init fails, treat it as no order placement for online flow.
+            order.delete()
             return Response({'detail': payment_init.get('error', 'Payment initialization failed.')}, status=status.HTTP_502_BAD_GATEWAY)
 
         return Response(
@@ -2250,10 +2278,7 @@ def checkout_view(request):
     return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
 
-@api_view(['GET', 'POST'])
-@permission_classes([AllowAny])
-@parser_classes([JSONParser, FormParser, MultiPartParser])
-def ssl_payment_success_view(request):
+def _handle_ssl_payment_success(request):
     payload = _extract_payment_payload(request)
     transaction_id = payload.get('tran_id')
     if not transaction_id:
@@ -2308,6 +2333,31 @@ def ssl_payment_success_view(request):
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 @parser_classes([JSONParser, FormParser, MultiPartParser])
+def ssl_payment_success_view(request):
+    result = _handle_ssl_payment_success(request)
+    if _should_redirect_to_app(request) and result.status_code == status.HTTP_200_OK:
+        payload = _extract_payment_payload(request)
+        transaction_id = payload.get('tran_id', '')
+        if not transaction_id:
+            return result
+        payment = SSLPayment.objects.select_related('order').filter(transaction_id=transaction_id).first() if transaction_id else None
+        order_id = payment.order_id if payment else None
+        guest_token = payment.order.guest_access_token if payment and payment.order and payment.order.guest_checkout else ''
+        redirect_url = _build_app_redirect_url(
+            settings.APP_SUCCESS_URL,
+            order_id=order_id,
+            payment_status='paid',
+            transaction_id=transaction_id,
+            guest_token=guest_token,
+        )
+        if redirect_url:
+            return HttpResponseRedirect(redirect_url)
+    return result
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+@parser_classes([JSONParser, FormParser, MultiPartParser])
 def ssl_payment_fail_view(request):
     payload = _extract_payment_payload(request)
     transaction_id = payload.get('tran_id')
@@ -2321,14 +2371,20 @@ def ssl_payment_fail_view(request):
     order = payment.order
 
     if order.payment_status != 'paid' and payment.status != 'paid':
-        order.payment_status = 'failed'
-        order.status = 'cancelled'
-        order.save(update_fields=['payment_status', 'status', 'updated_at'])
-        payment.status = 'failed'
-        payment.gateway_raw_response = json.dumps(payload)
-        payment.save(update_fields=['status', 'gateway_raw_response', 'updated_at'])
+        # For online flow, failed payment means order should not remain placed.
+        order.delete()
 
-    return Response({'message': 'Payment marked as failed', 'order_id': order.id}, status=status.HTTP_200_OK)
+    if _should_redirect_to_app(request):
+        redirect_url = _build_app_redirect_url(
+            settings.APP_FAIL_URL,
+            order_id=None,
+            payment_status='failed',
+            transaction_id=transaction_id,
+        )
+        if redirect_url:
+            return HttpResponseRedirect(redirect_url)
+
+    return Response({'message': 'Payment marked as failed', 'order_id': None}, status=status.HTTP_200_OK)
 
 
 @api_view(['GET', 'POST'])
@@ -2347,28 +2403,39 @@ def ssl_payment_cancel_view(request):
     order = payment.order
 
     if order.payment_status != 'paid' and payment.status != 'paid':
-        order.payment_status = 'failed'
-        order.status = 'cancelled'
-        order.save(update_fields=['payment_status', 'status', 'updated_at'])
-        payment.status = 'cancelled'
-        payment.gateway_raw_response = json.dumps(payload)
-        payment.save(update_fields=['status', 'gateway_raw_response', 'updated_at'])
+        # For online flow, cancelled payment means order should not remain placed.
+        order.delete()
 
-    return Response({'message': 'Payment cancelled', 'order_id': order.id}, status=status.HTTP_200_OK)
+    if _should_redirect_to_app(request):
+        redirect_url = _build_app_redirect_url(
+            settings.APP_CANCEL_URL,
+            order_id=None,
+            payment_status='cancelled',
+            transaction_id=transaction_id,
+        )
+        if redirect_url:
+            return HttpResponseRedirect(redirect_url)
+
+    return Response({'message': 'Payment cancelled', 'order_id': None}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @parser_classes([JSONParser, FormParser, MultiPartParser])
 def ssl_payment_ipn_view(request):
-    return ssl_payment_success_view(request)
+    return _handle_ssl_payment_success(request)
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def order_list_view(request):
     """List all orders for the current user"""
-    orders = Order.objects.filter(user=request.user).prefetch_related('items')
+    orders = (
+        Order.objects
+        .filter(user=request.user)
+        .exclude(payment_method='card', payment_status__in=['pending', 'failed'])
+        .prefetch_related('items')
+    )
     serializer = OrderSerializer(orders, many=True)
     return Response(serializer.data)
 
@@ -2378,7 +2445,12 @@ def order_list_view(request):
 def order_detail_view(request, order_id):
     """Get a specific order's details"""
     try:
-        order = Order.objects.prefetch_related('items').get(id=order_id, user=request.user)
+        order = (
+            Order.objects
+            .prefetch_related('items')
+            .exclude(payment_method='card', payment_status__in=['pending', 'failed'])
+            .get(id=order_id, user=request.user)
+        )
     except Order.DoesNotExist:
         return Response({'detail': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
     return Response(OrderSerializer(order).data)
@@ -2393,10 +2465,15 @@ def guest_order_detail_view(request, order_id):
         return Response({'detail': 'Guest token is required'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        order = Order.objects.prefetch_related('items').get(
-            id=order_id,
-            guest_checkout=True,
-            guest_access_token=token,
+        order = (
+            Order.objects
+            .prefetch_related('items')
+            .exclude(payment_method='card', payment_status__in=['pending', 'failed'])
+            .get(
+                id=order_id,
+                guest_checkout=True,
+                guest_access_token=token,
+            )
         )
     except Order.DoesNotExist:
         return Response({'detail': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -2466,6 +2543,7 @@ def brand_orders_view(request):
     orders = (
         Order.objects
         .filter(items__brand=brand)
+        .exclude(payment_method='card', payment_status__in=['pending', 'failed'])
         .prefetch_related('items')
         .distinct()
         .order_by('-created_at')
@@ -2486,6 +2564,7 @@ def brand_order_detail_view(request, order_id):
         order = (
             Order.objects
             .prefetch_related('items')
+            .exclude(payment_method='card', payment_status__in=['pending', 'failed'])
             .get(id=order_id, items__brand=brand)
         )
     except Order.DoesNotExist:

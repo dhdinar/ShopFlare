@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from decimal import Decimal
 import re
 from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address, Order, OrderItem, Notification, SSLPayment
 
@@ -346,6 +347,8 @@ class OrderSerializer(serializers.ModelSerializer):
     payment_gateway = serializers.SerializerMethodField()
     gateway_val_id = serializers.SerializerMethodField()
     paid_at = serializers.SerializerMethodField()
+    paid_amount = serializers.SerializerMethodField()
+    due_amount = serializers.SerializerMethodField()
 
     def get_username(self, obj):
         if obj.user:
@@ -368,6 +371,18 @@ class OrderSerializer(serializers.ModelSerializer):
         payment = getattr(obj, 'ssl_payment', None)
         return payment.paid_at if payment else None
 
+    def get_paid_amount(self, obj):
+        if obj.payment_method == 'card' and obj.payment_status == 'paid':
+            return obj.total_amount
+        return Decimal('0.00')
+
+    def get_due_amount(self, obj):
+        paid = self.get_paid_amount(obj)
+        try:
+            return obj.total_amount - Decimal(str(paid))
+        except Exception:
+            return obj.total_amount
+
     class Meta:
         model = Order
         fields = [
@@ -377,7 +392,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'shipping_full_name', 'shipping_phone',
             'shipping_address_line1', 'shipping_address_line2',
             'shipping_city', 'shipping_state', 'shipping_postal_code', 'shipping_country',
-            'subtotal', 'shipping_cost', 'total_amount',
+            'subtotal', 'shipping_cost', 'total_amount', 'paid_amount', 'due_amount',
             'notes', 'items', 'created_at', 'updated_at',
         ]
         read_only_fields = [
@@ -401,7 +416,7 @@ class CheckoutSerializer(serializers.Serializer):
     shipping_country = serializers.CharField(max_length=100, required=False)
     shipping_cost = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, min_value=0)
 
-    payment_method = serializers.ChoiceField(choices=['cod', 'card', 'wallet'], default='cod')
+    payment_method = serializers.ChoiceField(choices=['cod', 'card'], default='cod')
     notes = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, attrs):
@@ -434,7 +449,7 @@ class GuestCheckoutSerializer(serializers.Serializer):
     shipping_postal_code = serializers.CharField(max_length=20, required=False, allow_blank=True)
     shipping_country = serializers.CharField(max_length=100, required=True)
     shipping_cost = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, min_value=0)
-    payment_method = serializers.ChoiceField(choices=['cod', 'card', 'wallet'], default='cod')
+    payment_method = serializers.ChoiceField(choices=['cod', 'card'], default='cod')
     notes = serializers.CharField(required=False, allow_blank=True)
     items = GuestCheckoutItemSerializer(many=True, required=True)
 

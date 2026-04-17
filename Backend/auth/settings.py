@@ -264,4 +264,9 @@ SSL_FAIL_URL = os.environ.get('SSL_FAIL_URL', '')
 SSL_CANCEL_URL = os.environ.get('SSL_CANCEL_URL', '')
 SSL_IPN_URL = os.environ.get('SSL_IPN_URL', '')
 
+# Mobile app deep-link redirects after SSL callbacks
+APP_SUCCESS_URL = os.environ.get('APP_SUCCESS_URL', 'shopflare://orderDetail')
+APP_FAIL_URL = os.environ.get('APP_FAIL_URL', 'shopflare://orderDetail')
+APP_CANCEL_URL = os.environ.get('APP_CANCEL_URL', 'shopflare://orderDetail')
+
 
