@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 import re
-from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address, Order, OrderItem, Notification
+from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address, Order, OrderItem, Notification, SSLPayment
 
 User = get_user_model()
 
@@ -342,23 +342,49 @@ class OrderSerializer(serializers.ModelSerializer):
     """Serializer for orders (read)"""
     items = OrderItemSerializer(many=True, read_only=True)
     username = serializers.SerializerMethodField()
+    transaction_id = serializers.SerializerMethodField()
+    payment_gateway = serializers.SerializerMethodField()
+    gateway_val_id = serializers.SerializerMethodField()
+    paid_at = serializers.SerializerMethodField()
 
     def get_username(self, obj):
         if obj.user:
             return obj.user.username
         return obj.guest_email or 'Guest'
 
+    def get_transaction_id(self, obj):
+        payment = getattr(obj, 'ssl_payment', None)
+        return payment.transaction_id if payment else None
+
+    def get_payment_gateway(self, obj):
+        payment = getattr(obj, 'ssl_payment', None)
+        return payment.payment_gateway if payment else None
+
+    def get_gateway_val_id(self, obj):
+        payment = getattr(obj, 'ssl_payment', None)
+        return payment.gateway_val_id if payment else None
+
+    def get_paid_at(self, obj):
+        payment = getattr(obj, 'ssl_payment', None)
+        return payment.paid_at if payment else None
+
     class Meta:
         model = Order
         fields = [
-            'id', 'username', 'guest_checkout', 'guest_email', 'guest_access_token', 'status', 'payment_method', 'payment_status',
+            'id', 'username', 'guest_checkout', 'guest_email', 'guest_access_token',
+            'transaction_id', 'payment_gateway', 'gateway_val_id', 'paid_at',
+            'status', 'payment_method', 'payment_status',
             'shipping_full_name', 'shipping_phone',
             'shipping_address_line1', 'shipping_address_line2',
             'shipping_city', 'shipping_state', 'shipping_postal_code', 'shipping_country',
             'subtotal', 'shipping_cost', 'total_amount',
             'notes', 'items', 'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'username', 'guest_checkout', 'guest_email', 'guest_access_token', 'subtotal', 'total_amount', 'created_at', 'updated_at']
+        read_only_fields = [
+            'id', 'username', 'guest_checkout', 'guest_email', 'guest_access_token',
+            'transaction_id', 'payment_gateway', 'gateway_val_id', 'paid_at',
+            'subtotal', 'total_amount', 'created_at', 'updated_at'
+        ]
 
 
 class CheckoutSerializer(serializers.Serializer):

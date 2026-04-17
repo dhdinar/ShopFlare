@@ -267,6 +267,38 @@ class Order(models.Model):
         return f"Order #{self.id} by {owner} - {self.status}"
 
 
+class SSLPayment(models.Model):
+    """Dedicated payment record linked to one order for SSLCommerz flow."""
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('paid', 'Paid'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='ssl_payment')
+    transaction_id = models.CharField(max_length=64, unique=True, db_index=True)
+    payment_gateway = models.CharField(max_length=32, default='sslcommerz')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    gateway_val_id = models.CharField(max_length=128, blank=True, null=True)
+    payment_url = models.URLField(max_length=500, blank=True, null=True)
+    gateway_raw_response = models.TextField(blank=True, null=True)
+    paid_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'ssl_payments'
+        verbose_name = 'SSL Payment'
+        verbose_name_plural = 'SSL Payments'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.transaction_id} - {self.status}"
+
+
 class OrderItem(models.Model):
     """Individual line items in an order"""
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')

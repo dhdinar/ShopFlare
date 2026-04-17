@@ -13,7 +13,12 @@ from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from datetime import timedelta
+from decimal import Decimal
+from urllib import parse as urllib_parse
+from urllib import request as urllib_request
+from urllib import error as urllib_error
 import hashlib
+import json
 import secrets
 
 
@@ -27,7 +32,7 @@ from .serializers import (UserSerializer, BrandSerializer, RegisterSerializer,
                           MessageSerializer, AddressSerializer, ChangePasswordSerializer,
                           OrderSerializer, CheckoutSerializer, GuestCheckoutSerializer, OrderStatusUpdateSerializer,
                           NotificationSerializer)
-from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address, Order, OrderItem, Notification, EmailVerificationCode, PasswordResetCode
+from .models import Brand, Product, ProductImage, Wishlist, CartItem, Review, Message, Address, Order, OrderItem, Notification, EmailVerificationCode, PasswordResetCode, SSLPayment
 from .authentication import BrandUser
 
 User = get_user_model()
@@ -1704,6 +1709,210 @@ def health(request):
     return HttpResponse("OK")
 
 
+def _generate_transaction_id(order_id):
+    return f"SF-{order_id}-{secrets.token_hex(4).upper()}"
+
+
+def _get_public_base_url(request):
+    if settings.DEBUG:
+        scheme = 'http'
+    else:
+        scheme = 'https'
+    host = request.get_host()
+    return f"{scheme}://{host}"
+
+
+def _resolve_payment_callback_url(request, path, configured_url=''):
+    if configured_url:
+        return configured_url
+    return f"{_get_public_base_url(request)}{path}"
+
+
+def _post_form(url, payload):
+    encoded_payload = urllib_parse.urlencode(payload).encode('utf-8')
+    req = urllib_request.Request(url, data=encoded_payload)
+    req.add_header('Content-Type', 'application/x-www-form-urlencoded')
+    with urllib_request.urlopen(req, timeout=25) as response:
+        body = response.read().decode('utf-8')
+        try:
+            return json.loads(body)
+        except json.JSONDecodeError:
+            return {'raw_response': body}
+
+
+def _validate_ssl_payment(val_id, transaction_id):
+    if not settings.SSL_PAYMENT_VERIFY_ENABLED:
+        return {'status': 'VALID', 'tran_id': transaction_id}
+
+    validate_payload = {
+        'val_id': val_id,
+        'store_id': settings.SSL_STORE_ID,
+        'store_passwd': settings.SSL_STORE_PASSWORD,
+        'format': 'json',
+    }
+    return _post_form(settings.SSL_VALIDATE_URL, validate_payload)
+
+
+def _initialize_ssl_payment(request, order, payment):
+    if not settings.SSL_STORE_ID or not settings.SSL_STORE_PASSWORD:
+        return {'ok': False, 'error': 'SSLCommerz credentials are not configured.'}
+
+    success_url = _resolve_payment_callback_url(
+        request,
+        '/api/auth/payment/ssl/success/',
+        settings.SSL_SUCCESS_URL,
+    )
+    fail_url = _resolve_payment_callback_url(
+        request,
+        '/api/auth/payment/ssl/fail/',
+        settings.SSL_FAIL_URL,
+    )
+    cancel_url = _resolve_payment_callback_url(
+        request,
+        '/api/auth/payment/ssl/cancel/',
+        settings.SSL_CANCEL_URL,
+    )
+    ipn_url = _resolve_payment_callback_url(
+        request,
+        '/api/auth/payment/ssl/ipn/',
+        settings.SSL_IPN_URL,
+    )
+
+    payload = {
+        'store_id': settings.SSL_STORE_ID,
+        'store_passwd': settings.SSL_STORE_PASSWORD,
+        'total_amount': str(order.total_amount),
+        'currency': 'BDT',
+        'tran_id': payment.transaction_id,
+        'success_url': success_url,
+        'fail_url': fail_url,
+        'cancel_url': cancel_url,
+        'ipn_url': ipn_url,
+        'shipping_method': 'NO',
+        'product_name': f'ShopFlare Order #{order.id}',
+        'product_category': 'Fashion',
+        'product_profile': 'general',
+        'cus_name': order.shipping_full_name or 'Customer',
+        'cus_email': order.guest_email or (order.user.email if order.user else 'customer@shopflare.com'),
+        'cus_add1': order.shipping_address_line1,
+        'cus_add2': order.shipping_address_line2 or '',
+        'cus_city': order.shipping_city,
+        'cus_state': order.shipping_state or '',
+        'cus_postcode': order.shipping_postal_code or '',
+        'cus_country': order.shipping_country or 'Bangladesh',
+        'cus_phone': order.shipping_phone or '',
+        'ship_name': order.shipping_full_name or 'Customer',
+        'ship_add1': order.shipping_address_line1,
+        'ship_add2': order.shipping_address_line2 or '',
+        'ship_city': order.shipping_city,
+        'ship_state': order.shipping_state or '',
+        'ship_postcode': order.shipping_postal_code or '',
+        'ship_country': order.shipping_country or 'Bangladesh',
+    }
+
+    try:
+        response_data = _post_form(settings.SSL_INIT_URL, payload)
+    except urllib_error.URLError as exc:
+        return {'ok': False, 'error': f'Failed to connect to SSLCommerz: {exc}'}
+    except Exception as exc:
+        return {'ok': False, 'error': f'Payment initialization failed: {exc}'}
+
+    payment_url = response_data.get('GatewayPageURL')
+    if not payment_url:
+        return {'ok': False, 'error': 'SSLCommerz did not return payment URL.', 'data': response_data}
+
+    payment.payment_url = payment_url
+    payment.gateway_raw_response = json.dumps(response_data)
+    payment.save(update_fields=['payment_url', 'gateway_raw_response', 'updated_at'])
+    return {'ok': True, 'payment_url': payment_url, 'data': response_data}
+
+
+def _complete_paid_order(payment, gateway_val_id='', gateway_payload=None):
+    from django.db import transaction
+
+    order = payment.order
+    if order.payment_status == 'paid':
+        return {'ok': True, 'already_paid': True}
+
+    with transaction.atomic():
+        locked_payment = SSLPayment.objects.select_for_update().select_related('order').get(id=payment.id)
+        locked_order = locked_payment.order
+        if locked_order.payment_status == 'paid' or locked_payment.status == 'paid':
+            return {'ok': True, 'already_paid': True}
+
+        items = list(locked_order.items.select_related('product', 'brand'))
+        product_ids = [item.product_id for item in items if item.product_id]
+        product_map = {p.id: p for p in Product.objects.select_for_update().filter(id__in=product_ids)}
+
+        for item in items:
+            if not item.product_id:
+                continue
+            product = product_map.get(item.product_id)
+            if not product or product.stock < item.quantity:
+                locked_order.payment_status = 'failed'
+                locked_order.status = 'cancelled'
+                locked_order.save(update_fields=['payment_status', 'status', 'updated_at'])
+                locked_payment.status = 'failed'
+                if gateway_val_id:
+                    locked_payment.gateway_val_id = gateway_val_id
+                if gateway_payload is not None:
+                    locked_payment.gateway_raw_response = json.dumps(gateway_payload)
+                locked_payment.save(update_fields=['status', 'gateway_val_id', 'gateway_raw_response', 'updated_at'])
+                return {'ok': False, 'error': f'Insufficient stock for "{item.product_name}" during payment confirmation.'}
+
+        for item in items:
+            if not item.product_id:
+                continue
+            product = product_map[item.product_id]
+            product.stock -= item.quantity
+            product.save(update_fields=['stock'])
+
+        locked_order.payment_status = 'paid'
+        locked_order.status = 'confirmed'
+        locked_order.save(update_fields=['payment_status', 'status', 'updated_at'])
+
+        locked_payment.status = 'paid'
+        locked_payment.paid_at = timezone.now()
+        if gateway_val_id:
+            locked_payment.gateway_val_id = gateway_val_id
+        if gateway_payload is not None:
+            locked_payment.gateway_raw_response = json.dumps(gateway_payload)
+        locked_payment.save(update_fields=['status', 'paid_at', 'gateway_val_id', 'gateway_raw_response', 'updated_at'])
+
+        if locked_order.user_id:
+            CartItem.objects.filter(user=locked_order.user).delete()
+
+    create_user_notification(
+        locked_order.user,
+        title=f'Payment successful for order #{locked_order.id}',
+        body='Your payment has been completed and the order is confirmed.',
+        notification_type='order',
+        related_order=locked_order,
+    )
+    brand_ids = set(locked_order.items.exclude(brand__isnull=True).values_list('brand_id', flat=True))
+    for brand in Brand.objects.filter(id__in=brand_ids):
+        create_brand_notification(
+            brand,
+            title=f'Paid order #{locked_order.id}',
+            body='A new paid order containing your product(s) has been confirmed.',
+            notification_type='order',
+            related_order=locked_order,
+        )
+
+    return {'ok': True, 'already_paid': False}
+
+
+def _extract_payment_payload(request):
+    payload = {}
+    if hasattr(request, 'data') and isinstance(request.data, dict):
+        payload.update(request.data)
+    if hasattr(request, 'POST'):
+        payload.update(request.POST.dict())
+    if hasattr(request, 'query_params'):
+        payload.update(request.query_params.dict())
+    return payload
+
+
 # ==================== Checkout / Order Views ====================
 
 @api_view(['POST'])
@@ -1711,7 +1920,6 @@ def health(request):
 def guest_checkout_view(request):
     """Place an order as guest without creating an account."""
     from django.db import transaction
-    from decimal import Decimal
 
     serializer = GuestCheckoutSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -1761,6 +1969,62 @@ def guest_checkout_view(request):
     SHIPPING_COST = Decimal('0.00') if subtotal > FREE_SHIPPING_THRESHOLD else BASE_SHIPPING_COST
     total_amount = subtotal + SHIPPING_COST
 
+    payment_method = data.get('payment_method', 'cod')
+
+    if payment_method in ('card', 'wallet'):
+        order = Order.objects.create(
+            user=None,
+            guest_checkout=True,
+            guest_email=data.get('guest_email'),
+            guest_access_token=secrets.token_urlsafe(24),
+            payment_method=payment_method,
+            payment_status='pending',
+            notes=data.get('notes', ''),
+            subtotal=subtotal,
+            shipping_cost=SHIPPING_COST,
+            total_amount=total_amount,
+            **shipping,
+        )
+        payment = SSLPayment.objects.create(
+            order=order,
+            transaction_id=_generate_transaction_id(order.id),
+            payment_gateway='sslcommerz',
+            status='pending',
+            amount=order.total_amount,
+        )
+
+        for product, item in resolved_items:
+            unit_price = product.sale_price if product.is_on_sale else product.price
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                brand=product.brand,
+                product_name=product.name,
+                product_price=unit_price,
+                quantity=item['quantity'],
+                selected_size=item.get('selected_size') or '',
+                selected_color=item.get('selected_color') or '',
+            )
+
+        payment_init = _initialize_ssl_payment(request, order, payment)
+        if not payment_init.get('ok'):
+            order.payment_status = 'failed'
+            order.status = 'cancelled'
+            order.save(update_fields=['payment_status', 'status', 'updated_at'])
+            payment.status = 'failed'
+            payment.save(update_fields=['status', 'updated_at'])
+            return Response({'detail': payment_init.get('error', 'Payment initialization failed.')}, status=status.HTTP_502_BAD_GATEWAY)
+
+        return Response(
+            {
+                'payment_required': True,
+                'payment_url': payment_init['payment_url'],
+                'transaction_id': payment.transaction_id,
+                'order': OrderSerializer(order).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
     with transaction.atomic():
         locked_products = {
             p.id: p for p in Product.objects.select_for_update().filter(id__in=product_ids)
@@ -1779,7 +2043,7 @@ def guest_checkout_view(request):
             guest_checkout=True,
             guest_email=data.get('guest_email'),
             guest_access_token=secrets.token_urlsafe(24),
-            payment_method=data.get('payment_method', 'cod'),
+            payment_method=payment_method,
             notes=data.get('notes', ''),
             subtotal=subtotal,
             shipping_cost=SHIPPING_COST,
@@ -1810,7 +2074,6 @@ def guest_checkout_view(request):
 def checkout_view(request):
     """Place an order from the user's current cart"""
     from django.db import transaction
-    from decimal import Decimal
 
     serializer = CheckoutSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -1867,6 +2130,59 @@ def checkout_view(request):
     SHIPPING_COST = Decimal('0.00') if subtotal > FREE_SHIPPING_THRESHOLD else BASE_SHIPPING_COST
     total_amount = subtotal + SHIPPING_COST
 
+    payment_method = data.get('payment_method', 'cod')
+
+    if payment_method in ('card', 'wallet'):
+        order = Order.objects.create(
+            user=request.user,
+            payment_method=payment_method,
+            payment_status='pending',
+            notes=data.get('notes', ''),
+            subtotal=subtotal,
+            shipping_cost=SHIPPING_COST,
+            total_amount=total_amount,
+            **shipping,
+        )
+        payment = SSLPayment.objects.create(
+            order=order,
+            transaction_id=_generate_transaction_id(order.id),
+            payment_gateway='sslcommerz',
+            status='pending',
+            amount=order.total_amount,
+        )
+
+        for item in cart_items:
+            unit_price = item.product.sale_price if item.product.is_on_sale else item.product.price
+            OrderItem.objects.create(
+                order=order,
+                product=item.product,
+                brand=item.product.brand,
+                product_name=item.product.name,
+                product_price=unit_price,
+                quantity=item.quantity,
+                selected_size=item.selected_size,
+                selected_color=item.selected_color,
+            )
+
+        payment_init = _initialize_ssl_payment(request, order, payment)
+        if not payment_init.get('ok'):
+            order.payment_status = 'failed'
+            order.status = 'cancelled'
+            order.save(update_fields=['payment_status', 'status', 'updated_at'])
+            payment.status = 'failed'
+            payment.save(update_fields=['status', 'updated_at'])
+            return Response({'detail': payment_init.get('error', 'Payment initialization failed.')}, status=status.HTTP_502_BAD_GATEWAY)
+
+        return Response(
+            {
+                'payment_required': True,
+                'payment_url': payment_init['payment_url'],
+                'transaction_id': payment.transaction_id,
+                'order': OrderSerializer(order).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
     # Use atomic transaction to prevent partial failures
     with transaction.atomic():
         # Lock product rows to prevent race conditions
@@ -1885,7 +2201,7 @@ def checkout_view(request):
         # Create the order
         order = Order.objects.create(
             user=request.user,
-            payment_method=data.get('payment_method', 'cod'),
+            payment_method=payment_method,
             notes=data.get('notes', ''),
             subtotal=subtotal,
             shipping_cost=SHIPPING_COST,
@@ -1932,6 +2248,120 @@ def checkout_view(request):
         )
 
     return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+@parser_classes([JSONParser, FormParser, MultiPartParser])
+def ssl_payment_success_view(request):
+    payload = _extract_payment_payload(request)
+    transaction_id = payload.get('tran_id')
+    if not transaction_id:
+        return Response({'detail': 'tran_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        payment = SSLPayment.objects.select_related('order').get(transaction_id=transaction_id)
+    except SSLPayment.DoesNotExist:
+        return Response({'detail': 'Order not found for transaction'}, status=status.HTTP_404_NOT_FOUND)
+    order = payment.order
+
+    if order.payment_status == 'paid' or payment.status == 'paid':
+        return Response({'message': 'Payment already processed', 'order_id': order.id}, status=status.HTTP_200_OK)
+
+    val_id = payload.get('val_id', '')
+    try:
+        validated = _validate_ssl_payment(val_id, transaction_id)
+    except Exception as exc:
+        return Response({'detail': f'Payment validation failed: {exc}'}, status=status.HTTP_502_BAD_GATEWAY)
+
+    validated_status = str(validated.get('status', '')).upper()
+    validated_tran_id = validated.get('tran_id')
+    validated_amount = validated.get('amount')
+
+    if validated_tran_id and validated_tran_id != transaction_id:
+        return Response({'detail': 'Transaction id mismatch'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if validated_amount is not None:
+        try:
+            if Decimal(str(validated_amount)) != payment.amount:
+                return Response({'detail': 'Amount mismatch'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            return Response({'detail': 'Invalid validated amount'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if validated_status not in {'VALID', 'VALIDATED'}:
+        order.payment_status = 'failed'
+        order.status = 'cancelled'
+        order.save(update_fields=['payment_status', 'status', 'updated_at'])
+        payment.status = 'failed'
+        payment.gateway_val_id = val_id or None
+        payment.gateway_raw_response = json.dumps(validated)
+        payment.save(update_fields=['status', 'gateway_val_id', 'gateway_raw_response', 'updated_at'])
+        return Response({'detail': 'Payment status is not valid'}, status=status.HTTP_400_BAD_REQUEST)
+
+    completed = _complete_paid_order(payment, gateway_val_id=val_id, gateway_payload=validated)
+    if not completed.get('ok'):
+        return Response({'detail': completed.get('error', 'Could not finalize paid order')}, status=status.HTTP_409_CONFLICT)
+
+    return Response({'message': 'Payment successful', 'order_id': order.id}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+@parser_classes([JSONParser, FormParser, MultiPartParser])
+def ssl_payment_fail_view(request):
+    payload = _extract_payment_payload(request)
+    transaction_id = payload.get('tran_id')
+    if not transaction_id:
+        return Response({'detail': 'tran_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        payment = SSLPayment.objects.select_related('order').get(transaction_id=transaction_id)
+    except SSLPayment.DoesNotExist:
+        return Response({'detail': 'Order not found for transaction'}, status=status.HTTP_404_NOT_FOUND)
+    order = payment.order
+
+    if order.payment_status != 'paid' and payment.status != 'paid':
+        order.payment_status = 'failed'
+        order.status = 'cancelled'
+        order.save(update_fields=['payment_status', 'status', 'updated_at'])
+        payment.status = 'failed'
+        payment.gateway_raw_response = json.dumps(payload)
+        payment.save(update_fields=['status', 'gateway_raw_response', 'updated_at'])
+
+    return Response({'message': 'Payment marked as failed', 'order_id': order.id}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+@parser_classes([JSONParser, FormParser, MultiPartParser])
+def ssl_payment_cancel_view(request):
+    payload = _extract_payment_payload(request)
+    transaction_id = payload.get('tran_id')
+    if not transaction_id:
+        return Response({'detail': 'tran_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        payment = SSLPayment.objects.select_related('order').get(transaction_id=transaction_id)
+    except SSLPayment.DoesNotExist:
+        return Response({'detail': 'Order not found for transaction'}, status=status.HTTP_404_NOT_FOUND)
+    order = payment.order
+
+    if order.payment_status != 'paid' and payment.status != 'paid':
+        order.payment_status = 'failed'
+        order.status = 'cancelled'
+        order.save(update_fields=['payment_status', 'status', 'updated_at'])
+        payment.status = 'cancelled'
+        payment.gateway_raw_response = json.dumps(payload)
+        payment.save(update_fields=['status', 'gateway_raw_response', 'updated_at'])
+
+    return Response({'message': 'Payment cancelled', 'order_id': order.id}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@parser_classes([JSONParser, FormParser, MultiPartParser])
+def ssl_payment_ipn_view(request):
+    return ssl_payment_success_view(request)
 
 
 @api_view(['GET'])

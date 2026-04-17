@@ -41,11 +41,13 @@ _load_env_file(BASE_DIR / '.env')
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-och3uiq5agrrjasgcd3d=m#ih(1uk%zm$qkwqqjtl7q40p39nv')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
-
 # Render.com sets RENDER=true in environment
 RENDER = os.environ.get('RENDER', 'false').lower() == 'true'
+
+# SECURITY WARNING: don't run with debug turned on in production!
+# Default to DEBUG=False on Render unless explicitly overridden.
+DEBUG_DEFAULT = 'False' if RENDER else 'True'
+DEBUG = os.environ.get('DEBUG', DEBUG_DEFAULT).lower() == 'true'
 
 ALLOWED_HOSTS = []
 if RENDER:
@@ -232,10 +234,34 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # Email settings for verification flow
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+# In production, default to SMTP so verification/reset codes are actually delivered.
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend',
+)
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@shopflare.com')
 EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() == 'true'
+
+# SSLCommerz payment settings
+SSL_STORE_ID = os.environ.get('SSL_STORE_ID', '')
+SSL_STORE_PASSWORD = os.environ.get('SSL_STORE_PASSWORD', '')
+SSL_IS_SANDBOX = os.environ.get('SSL_IS_SANDBOX', 'true').lower() == 'true'
+SSL_PAYMENT_VERIFY_ENABLED = os.environ.get('SSL_PAYMENT_VERIFY_ENABLED', 'true').lower() == 'true'
+SSL_INIT_URL = os.environ.get(
+    'SSL_INIT_URL',
+    'https://sandbox.sslcommerz.com/gwprocess/v4/api.php' if SSL_IS_SANDBOX else 'https://securepay.sslcommerz.com/gwprocess/v4/api.php',
+)
+SSL_VALIDATE_URL = os.environ.get(
+    'SSL_VALIDATE_URL',
+    'https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php' if SSL_IS_SANDBOX else 'https://securepay.sslcommerz.com/validator/api/validationserverAPI.php',
+)
+SSL_SUCCESS_URL = os.environ.get('SSL_SUCCESS_URL', '')
+SSL_FAIL_URL = os.environ.get('SSL_FAIL_URL', '')
+SSL_CANCEL_URL = os.environ.get('SSL_CANCEL_URL', '')
+SSL_IPN_URL = os.environ.get('SSL_IPN_URL', '')
+
+

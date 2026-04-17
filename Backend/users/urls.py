@@ -81,6 +81,10 @@ urlpatterns = [
     # Checkout & Orders (customer)
     path('checkout/', views.checkout_view, name='checkout'),
     path('checkout/guest/', views.guest_checkout_view, name='guest_checkout'),
+    path('payment/ssl/success/', views.ssl_payment_success_view, name='ssl_payment_success'),
+    path('payment/ssl/fail/', views.ssl_payment_fail_view, name='ssl_payment_fail'),
+    path('payment/ssl/cancel/', views.ssl_payment_cancel_view, name='ssl_payment_cancel'),
+    path('payment/ssl/ipn/', views.ssl_payment_ipn_view, name='ssl_payment_ipn'),
     path('orders/', views.order_list_view, name='order_list'),
     path('orders/<int:order_id>/', views.order_detail_view, name='order_detail'),
     path('orders/guest/<int:order_id>/', views.guest_order_detail_view, name='guest_order_detail'),
