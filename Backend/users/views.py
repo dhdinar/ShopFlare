@@ -1947,6 +1947,34 @@ def _extract_payment_payload(request):
     return payload
 
 
+def _normalize_gateway_status(payload):
+    for key in ('status', 'pay_status', 'bank_status'):
+        value = payload.get(key)
+        if value:
+            return str(value).upper()
+    return ''
+
+
+def _is_payload_success_fallback(payload, transaction_id, expected_amount):
+    # Fallback path for transient validator/API failures.
+    payload_tran = payload.get('tran_id')
+    if not payload_tran or str(payload_tran) != str(transaction_id):
+        return False
+
+    payload_amount = payload.get('amount') or payload.get('store_amount')
+    if payload_amount is None:
+        return False
+
+    try:
+        if Decimal(str(payload_amount)) != expected_amount:
+            return False
+    except Exception:
+        return False
+
+    normalized_status = _normalize_gateway_status(payload)
+    return normalized_status in {'VALID', 'VALIDATED', 'SUCCESS'}
+
+
 # ==================== Checkout / Order Views ====================
 
 @api_view(['POST'])
@@ -2297,7 +2325,16 @@ def _handle_ssl_payment_success(request):
     try:
         validated = _validate_ssl_payment(val_id, transaction_id)
     except Exception as exc:
-        return Response({'detail': f'Payment validation failed: {exc}'}, status=status.HTTP_502_BAD_GATEWAY)
+        if _is_payload_success_fallback(payload, transaction_id, payment.amount):
+            validated = {
+                'status': 'VALIDATED',
+                'tran_id': transaction_id,
+                'amount': str(payment.amount),
+                'validation_fallback': True,
+                'validation_error': str(exc),
+            }
+        else:
+            return Response({'detail': f'Payment validation failed: {exc}'}, status=status.HTTP_502_BAD_GATEWAY)
 
     validated_status = str(validated.get('status', '')).upper()
     validated_tran_id = validated.get('tran_id')
