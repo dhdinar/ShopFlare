@@ -58,13 +58,9 @@ export default function LoginScreen({ onNavigateToRegister }: LoginScreenProps) 
     }
 
     try {
-      console.log('LoginScreen: Attempting login...');
       await login(username, password);
-      console.log('LoginScreen: Login returned, app should navigate automatically');
       // The layout will automatically navigate to tabs when isSignedIn becomes true
     } catch (error: any) {
-      console.error('LoginScreen: Login failed:', error);
-
       if (error instanceof ApiError && error.code === 'email_not_verified') {
         const accountEmail = error.data?.email;
         const accountType = error.data?.user_type;

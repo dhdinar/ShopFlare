@@ -29,61 +29,64 @@ export default function PrivacyControlsScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <View style={styles.card}>
+        <View style={styles.cardDisabled} pointerEvents="none">
           <View style={styles.cardTitleRow}>
             <Ionicons name="person-circle-outline" size={20} color={ShopFlareColors.accent} />
             <ThemedText style={styles.cardTitle}>Account Privacy</ThemedText>
           </View>
 
-          <View style={styles.optionRow}>
+          <View style={styles.optionRowDisabled}>
             <View style={styles.optionTextWrap}>
-              <ThemedText style={styles.optionTitle}>Profile Visibility</ThemedText>
-              <ThemedText style={styles.optionSubtitle}>
+              <ThemedText style={styles.optionTitleDisabled}>Profile Visibility</ThemedText>
+              <ThemedText style={styles.optionSubtitleDisabled}>
                 Allow your public profile details to be visible in the app.
               </ThemedText>
             </View>
             <Switch
               value={profileVisible}
-              onValueChange={setProfileVisible}
+              onValueChange={undefined}
               trackColor={{ false: ShopFlareColors.border, true: ShopFlareColors.accentLight }}
               thumbColor={profileVisible ? ShopFlareColors.accent : ShopFlareColors.textLight}
+              disabled
             />
           </View>
         </View>
 
-        <View style={styles.card}>
+        <View style={styles.cardDisabled} pointerEvents="none">
           <View style={styles.cardTitleRow}>
             <Ionicons name="notifications-outline" size={20} color={ShopFlareColors.accent} />
             <ThemedText style={styles.cardTitle}>Notifications</ThemedText>
           </View>
 
-          <View style={styles.optionRow}>
+          <View style={styles.optionRowDisabled}>
             <View style={styles.optionTextWrap}>
-              <ThemedText style={styles.optionTitle}>Order & Security Alerts</ThemedText>
-              <ThemedText style={styles.optionSubtitle}>
+              <ThemedText style={styles.optionTitleDisabled}>Order & Security Alerts</ThemedText>
+              <ThemedText style={styles.optionSubtitleDisabled}>
                 Receive important alerts about orders and account security.
               </ThemedText>
             </View>
             <Switch
               value={orderAndSecurityAlerts}
-              onValueChange={setOrderAndSecurityAlerts}
+              onValueChange={undefined}
               trackColor={{ false: ShopFlareColors.border, true: ShopFlareColors.accentLight }}
               thumbColor={orderAndSecurityAlerts ? ShopFlareColors.accent : ShopFlareColors.textLight}
+              disabled
             />
           </View>
 
-          <View style={styles.optionRow}>
+          <View style={styles.optionRowDisabled}>
             <View style={styles.optionTextWrap}>
-              <ThemedText style={styles.optionTitle}>Marketing Emails</ThemedText>
-              <ThemedText style={styles.optionSubtitle}>
+              <ThemedText style={styles.optionTitleDisabled}>Marketing Emails</ThemedText>
+              <ThemedText style={styles.optionSubtitleDisabled}>
                 Receive offers, launches, and feature updates from ShopFlare.
               </ThemedText>
             </View>
             <Switch
               value={marketingEmails}
-              onValueChange={setMarketingEmails}
+              onValueChange={undefined}
               trackColor={{ false: ShopFlareColors.border, true: ShopFlareColors.accentLight }}
               thumbColor={marketingEmails ? ShopFlareColors.accent : ShopFlareColors.textLight}
+              disabled
             />
           </View>
         </View>
@@ -151,6 +154,15 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 12,
   },
+  cardDisabled: {
+    backgroundColor: ShopFlareColors.secondary,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ShopFlareColors.border,
+    padding: 14,
+    marginBottom: 12,
+    opacity: 0.5,
+  },
   cardTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -166,9 +178,20 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: ShopFlareColors.borderLight,
   },
+  optionRowDisabled: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: ShopFlareColors.borderLight,
+    opacity: 0.7,
+  },
   optionTextWrap: { flex: 1, paddingRight: 12 },
   optionTitle: { fontSize: 14, fontWeight: '600', color: ShopFlareColors.text },
+  optionTitleDisabled: { fontSize: 14, fontWeight: '600', color: ShopFlareColors.textLight },
   optionSubtitle: { fontSize: 12, color: ShopFlareColors.textSecondary, marginTop: 2, lineHeight: 17 },
+  optionSubtitleDisabled: { fontSize: 12, color: ShopFlareColors.textLight, marginTop: 2, lineHeight: 17 },
   linkRow: {
     flexDirection: 'row',
     alignItems: 'center',

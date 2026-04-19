@@ -6,6 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
 import { ShopFlareColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useFashion } from '@/context/FashionContext';
 import { getOrder, getBrandOrder, getGuestOrderDetail, cancelOrder, Order } from '@/services/orderService';
 import { formatTk } from '@/utils/currency';
 
@@ -13,6 +14,7 @@ export default function OrderDetailScreen() {
   const { id, guestToken } = useLocalSearchParams<{ id?: string | string[]; guestToken?: string | string[] }>();
   const router = useRouter();
   const { accessToken, user } = useAuth();
+  const { refreshCart, fetchProducts } = useFashion();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,6 +50,12 @@ export default function OrderDetailScreen() {
         return;
       }
       setOrder(data);
+
+      // If this is a paid online order, sync cart and stock after returning from payment.
+      if (accessToken && data?.payment_status === 'paid') {
+        await refreshCart();
+        await fetchProducts();
+      }
     } catch (err: any) {
       setOrder(null);
       Alert.alert('Error', err?.message || 'Failed to load order details');
@@ -248,7 +256,7 @@ export default function OrderDetailScreen() {
             <View style={styles.infoRow}>
               <ThemedText style={styles.infoLabel}>Payment Method</ThemedText>
               <ThemedText style={styles.infoValue}>
-                {order.payment_method === 'cod' ? 'Cash on Delivery' : order.payment_method === 'card' ? 'Card' : 'Wallet'}
+                {order.payment_method === 'cod' ? 'Cash on Delivery' : 'Pay Online (SSLCommerz)'}
               </ThemedText>
             </View>
             <View style={styles.infoRow}>
@@ -259,6 +267,18 @@ export default function OrderDetailScreen() {
               <ThemedText style={styles.infoLabel}>Shipping</ThemedText>
               <ThemedText style={[styles.infoValue, Number(order.shipping_cost) === 0 && { color: ShopFlareColors.success }]}> 
                 {Number(order.shipping_cost) === 0 ? 'FREE' : formatTk(order.shipping_cost)}
+              </ThemedText>
+            </View>
+            <View style={styles.infoRow}>
+              <ThemedText style={styles.infoLabel}>Paid</ThemedText>
+              <ThemedText style={[styles.infoValue, Number(order.paid_amount) > 0 && { color: ShopFlareColors.success }]}>
+                {formatTk(order.paid_amount)}
+              </ThemedText>
+            </View>
+            <View style={styles.infoRow}>
+              <ThemedText style={styles.infoLabel}>Due</ThemedText>
+              <ThemedText style={[styles.infoValue, Number(order.due_amount) === 0 && { color: ShopFlareColors.success }]}>
+                {formatTk(order.due_amount)}
               </ThemedText>
             </View>
             <View style={styles.divider} />

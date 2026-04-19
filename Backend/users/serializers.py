@@ -372,7 +372,7 @@ class OrderSerializer(serializers.ModelSerializer):
         return payment.paid_at if payment else None
 
     def get_paid_amount(self, obj):
-        if obj.payment_method == 'card' and obj.payment_status == 'paid':
+        if obj.payment_method == 'online' and obj.payment_status == 'paid':
             return obj.total_amount
         return Decimal('0.00')
 
@@ -416,7 +416,7 @@ class CheckoutSerializer(serializers.Serializer):
     shipping_country = serializers.CharField(max_length=100, required=False)
     shipping_cost = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, min_value=0)
 
-    payment_method = serializers.ChoiceField(choices=['cod', 'card'], default='cod')
+    payment_method = serializers.ChoiceField(choices=['cod', 'online'], default='cod')
     notes = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, attrs):
@@ -449,7 +449,7 @@ class GuestCheckoutSerializer(serializers.Serializer):
     shipping_postal_code = serializers.CharField(max_length=20, required=False, allow_blank=True)
     shipping_country = serializers.CharField(max_length=100, required=True)
     shipping_cost = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, min_value=0)
-    payment_method = serializers.ChoiceField(choices=['cod', 'card'], default='cod')
+    payment_method = serializers.ChoiceField(choices=['cod', 'online'], default='cod')
     notes = serializers.CharField(required=False, allow_blank=True)
     items = GuestCheckoutItemSerializer(many=True, required=True)
 

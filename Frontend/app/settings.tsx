@@ -108,13 +108,17 @@ export default function SettingsScreen() {
 
         {/* Notifications */}
         <ThemedText style={styles.sectionLabel}>Notifications</ThemedText>
-        <View style={styles.sectionCard}>
+        <View style={styles.sectionCardDisabled}>
           <SettingRow
             icon="bag-check-outline"
             title="Order Updates"
             subtitle="Shipping and delivery alerts"
             value={orderNotif}
-            onToggle={setOrderNotif}
+            onToggle={undefined}
+            showArrow={false}
+            // @ts-ignore
+            disabled
+            style={styles.settingRowDisabled}
           />
           <View style={styles.divider} />
           <SettingRow
@@ -122,7 +126,11 @@ export default function SettingsScreen() {
             title="Messages"
             subtitle="New chat messages"
             value={chatNotif}
-            onToggle={setChatNotif}
+            onToggle={undefined}
+            showArrow={false}
+            // @ts-ignore
+            disabled
+            style={styles.settingRowDisabled}
           />
           <View style={styles.divider} />
           {!isBrand && (
@@ -132,7 +140,11 @@ export default function SettingsScreen() {
                 title="Promotions & Offers"
                 subtitle="Deals and discount alerts"
                 value={promoNotif}
-                onToggle={setPromoNotif}
+                onToggle={undefined}
+                showArrow={false}
+                // @ts-ignore
+                disabled
+                style={styles.settingRowDisabled}
               />
               <View style={styles.divider} />
               <SettingRow
@@ -140,7 +152,11 @@ export default function SettingsScreen() {
                 title="Price Drop Alerts"
                 subtitle="When wishlist items go on sale"
                 value={priceAlerts}
-                onToggle={setPriceAlerts}
+                onToggle={undefined}
+                showArrow={false}
+                // @ts-ignore
+                disabled
+                style={styles.settingRowDisabled}
               />
             </>
           )}
@@ -148,27 +164,37 @@ export default function SettingsScreen() {
 
         {/* Privacy */}
         <ThemedText style={styles.sectionLabel}>Privacy</ThemedText>
-        <View style={styles.sectionCard}>
+        <View style={styles.sectionCardDisabled}>
           <SettingRow
             icon="eye-outline"
             title="Activity Status"
             subtitle="Show when you're online"
             value={activityStatus}
-            onToggle={setActivityStatus}
+            onToggle={undefined}
+            showArrow={false}
+            // @ts-ignore
+            disabled
+            style={styles.settingRowDisabled}
           />
           <View style={styles.divider} />
           <SettingRow
             icon="lock-closed-outline"
             title="Privacy Policy"
-            onPress={() => Alert.alert('Privacy Policy', 'Opens privacy policy page.')}
+            onPress={undefined}
             showArrow
+            // @ts-ignore
+            disabled
+            style={styles.settingRowDisabled}
           />
           <View style={styles.divider} />
           <SettingRow
             icon="document-text-outline"
             title="Terms of Service"
-            onPress={() => Alert.alert('Terms of Service', 'Opens terms of service page.')}
+            onPress={undefined}
             showArrow
+            // @ts-ignore
+            disabled
+            style={styles.settingRowDisabled}
           />
         </View>
 
@@ -234,11 +260,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: ShopFlareColors.borderLight,
   },
+  sectionCardDisabled: {
+    backgroundColor: ShopFlareColors.secondary,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: ShopFlareColors.borderLight,
+    opacity: 0.5,
+  },
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
     gap: 12,
+  },
+  settingRowDisabled: {
+    opacity: 0.6,
   },
   settingIcon: {
     width: 38,

@@ -22,7 +22,7 @@ export interface Order {
   id: number;
   username: string;
   status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
-  payment_method: 'cod' | 'card' | 'wallet';
+  payment_method: 'cod' | 'online';
   payment_status: string;
   shipping_full_name: string;
   shipping_phone: string | null;
@@ -35,6 +35,8 @@ export interface Order {
   subtotal: number;
   shipping_cost: number;
   total_amount: number;
+  paid_amount: number;
+  due_amount: number;
   notes: string | null;
   items: OrderItem[];
   created_at: string;
@@ -53,7 +55,7 @@ export interface CheckoutData {
   shipping_postal_code?: string;
   shipping_country?: string;
   shipping_cost?: number;
-  payment_method: 'cod' | 'card' | 'wallet';
+  payment_method: 'cod' | 'online';
   notes?: string;
 }
 
@@ -75,9 +77,16 @@ export interface GuestCheckoutData {
   shipping_postal_code?: string;
   shipping_country: string;
   shipping_cost?: number;
-  payment_method: 'cod' | 'card' | 'wallet';
+  payment_method: 'cod' | 'online';
   notes?: string;
   items: GuestCheckoutItem[];
+}
+
+export interface PaymentInitResponse {
+  payment_required: boolean;
+  payment_url: string;
+  transaction_id: string;
+  order: Order;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -89,6 +98,12 @@ function authHeaders(token: string): Record<string, string> {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
   };
+}
+
+function apiFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers);
+  headers.set('ngrok-skip-browser-warning', '69420');
+  return fetch(input, { ...init, headers });
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
@@ -111,7 +126,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
 /** Place an order from the customer's current cart */
 export const checkout = async (token: string, data: CheckoutData): Promise<Order> => {
-  const res = await fetch(`${API_BASE_URL}/auth/checkout/`, {
+  const res = await apiFetch(`${API_BASE_URL}/auth/checkout/`, {
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify(data),
@@ -121,7 +136,7 @@ export const checkout = async (token: string, data: CheckoutData): Promise<Order
 
 /** Place an order as guest */
 export const guestCheckout = async (data: GuestCheckoutData): Promise<Order> => {
-  const res = await fetch(`${API_BASE_URL}/auth/checkout/guest/`, {
+  const res = await apiFetch(`${API_BASE_URL}/auth/checkout/guest/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -129,6 +144,31 @@ export const guestCheckout = async (data: GuestCheckoutData): Promise<Order> => 
     body: JSON.stringify(data),
   });
   return handleResponse<Order>(res);
+};
+
+/** Initialize SSL payment for authenticated checkout */
+export const checkoutInitPayment = async (
+  token: string,
+  data: CheckoutData,
+): Promise<PaymentInitResponse> => {
+  const res = await apiFetch(`${API_BASE_URL}/auth/checkout/`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<PaymentInitResponse>(res);
+};
+
+/** Initialize SSL payment for guest checkout */
+export const guestCheckoutInitPayment = async (data: GuestCheckoutData): Promise<PaymentInitResponse> => {
+  const res = await apiFetch(`${API_BASE_URL}/auth/checkout/guest/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<PaymentInitResponse>(res);
 };
 
 export interface GuestOrderRef {
@@ -156,13 +196,13 @@ export const getGuestOrderRefs = async (): Promise<GuestOrderRef[]> => {
 };
 
 export const getGuestOrderDetail = async (orderId: number, token: string): Promise<Order> => {
-  const res = await fetch(`${API_BASE_URL}/auth/orders/guest/${orderId}/?token=${encodeURIComponent(token)}`);
+  const res = await apiFetch(`${API_BASE_URL}/auth/orders/guest/${orderId}/?token=${encodeURIComponent(token)}`);
   return handleResponse<Order>(res);
 };
 
 /** List all orders for the current customer */
 export const getOrders = async (token: string): Promise<Order[]> => {
-  const res = await fetch(`${API_BASE_URL}/auth/orders/`, {
+  const res = await apiFetch(`${API_BASE_URL}/auth/orders/`, {
     headers: authHeaders(token),
   });
   return handleResponse<Order[]>(res);
@@ -170,7 +210,7 @@ export const getOrders = async (token: string): Promise<Order[]> => {
 
 /** Get a single order by ID */
 export const getOrder = async (token: string, orderId: number): Promise<Order> => {
-  const res = await fetch(`${API_BASE_URL}/auth/orders/${orderId}/`, {
+  const res = await apiFetch(`${API_BASE_URL}/auth/orders/${orderId}/`, {
     headers: authHeaders(token),
   });
   return handleResponse<Order>(res);
@@ -178,7 +218,7 @@ export const getOrder = async (token: string, orderId: number): Promise<Order> =
 
 /** Cancel a pending/confirmed order */
 export const cancelOrder = async (token: string, orderId: number): Promise<Order> => {
-  const res = await fetch(`${API_BASE_URL}/auth/orders/${orderId}/cancel/`, {
+  const res = await apiFetch(`${API_BASE_URL}/auth/orders/${orderId}/cancel/`, {
     method: 'POST',
     headers: authHeaders(token),
   });
@@ -191,7 +231,7 @@ export const cancelOrder = async (token: string, orderId: number): Promise<Order
 
 /** List orders containing this brand's products */
 export const getBrandOrders = async (token: string): Promise<Order[]> => {
-  const res = await fetch(`${API_BASE_URL}/auth/brand/orders/`, {
+  const res = await apiFetch(`${API_BASE_URL}/auth/brand/orders/`, {
     headers: authHeaders(token),
   });
   return handleResponse<Order[]>(res);
@@ -199,7 +239,7 @@ export const getBrandOrders = async (token: string): Promise<Order[]> => {
 
 /** Get one order containing this brand's products */
 export const getBrandOrder = async (token: string, orderId: number): Promise<Order> => {
-  const res = await fetch(`${API_BASE_URL}/auth/brand/orders/${orderId}/`, {
+  const res = await apiFetch(`${API_BASE_URL}/auth/brand/orders/${orderId}/`, {
     headers: authHeaders(token),
   });
   return handleResponse<Order>(res);
@@ -211,7 +251,7 @@ export const updateOrderStatus = async (
   orderId: number,
   orderStatus: string
 ): Promise<Order> => {
-  const res = await fetch(`${API_BASE_URL}/auth/brand/orders/${orderId}/status/`, {
+  const res = await apiFetch(`${API_BASE_URL}/auth/brand/orders/${orderId}/status/`, {
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify({ status: orderStatus }),

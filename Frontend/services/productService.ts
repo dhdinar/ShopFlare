@@ -1,6 +1,17 @@
-// Product Service for Brand CRUD operations
-export const API_BASE_URL = 'https://shopflare-api-di4o.onrender.com/api';
+﻿// Product Service for Brand CRUD operations
+//export const API_BASE_URL = 'https://shopflare-api-di4o.onrender.com/api';
 //export const API_BASE_URL = 'http://192.168.0.98:8000/api'; 
+//export const API_BASE_URL = 'http://10.165.178.202:8000/api'; 
+//export const API_BASE_URL = 'http://192.168.68.62:8000/api';
+const PROXY_BASE_URL = 'https://django-ngrok-proxy.onrender.com';
+const NORMALIZED_PROXY_BASE_URL = PROXY_BASE_URL.replace(/\/proxy\/?$/, '').replace(/\/+$/, '');
+export const API_BASE_URL = `${NORMALIZED_PROXY_BASE_URL}/proxy`;
+
+const apiFetch = (input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> => {
+  const headers = new Headers(init.headers);
+  headers.set('ngrok-skip-browser-warning', '69420');
+  return globalThis.fetch(input, { ...init, headers });
+};
 
 export interface ProductImage {
   id: number;
@@ -53,7 +64,7 @@ export const getProducts = async (accessToken?: string): Promise<Product[]> => {
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/auth/products/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/products/`, {
     method: 'GET',
     headers,
   });
@@ -67,7 +78,7 @@ export const getProducts = async (accessToken?: string): Promise<Product[]> => {
 
 // Get single product
 export const getProduct = async (productId: number): Promise<Product> => {
-  const response = await fetch(`${API_BASE_URL}/auth/products/${productId}/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/products/${productId}/`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -83,7 +94,7 @@ export const getProduct = async (productId: number): Promise<Product> => {
 
 // Create product (brand only)
 export const createProduct = async (accessToken: string, data: ProductCreateData): Promise<Product> => {
-  const response = await fetch(`${API_BASE_URL}/auth/products/create/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/products/create/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -106,7 +117,7 @@ export const updateProduct = async (
   productId: number, 
   data: Partial<ProductCreateData>
 ): Promise<Product> => {
-  const response = await fetch(`${API_BASE_URL}/auth/products/${productId}/update/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/products/${productId}/update/`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -125,7 +136,7 @@ export const updateProduct = async (
 
 // Delete product (brand only)
 export const deleteProduct = async (accessToken: string, productId: number): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/auth/products/${productId}/delete/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/products/${productId}/delete/`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -141,7 +152,7 @@ export const deleteProduct = async (accessToken: string, productId: number): Pro
 
 // Get products from a specific brand
 export const getBrandProducts = async (brandId: number): Promise<{ brand: any; products: Product[] }> => {
-  const response = await fetch(`${API_BASE_URL}/auth/brands/${brandId}/products/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/brands/${brandId}/products/`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -165,7 +176,7 @@ export interface WishlistItem {
 }
 
 export const getWishlist = async (accessToken: string): Promise<WishlistItem[]> => {
-  const response = await fetch(`${API_BASE_URL}/auth/wishlist/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/wishlist/`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -181,7 +192,7 @@ export const getWishlist = async (accessToken: string): Promise<WishlistItem[]> 
 };
 
 export const addToWishlist = async (accessToken: string, productId: number): Promise<WishlistItem> => {
-  const response = await fetch(`${API_BASE_URL}/auth/wishlist/add/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/wishlist/add/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -199,7 +210,7 @@ export const addToWishlist = async (accessToken: string, productId: number): Pro
 };
 
 export const removeFromWishlist = async (accessToken: string, productId: number): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/auth/wishlist/remove/${productId}/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/wishlist/remove/${productId}/`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -227,7 +238,7 @@ export interface CartItemResponse {
 }
 
 export const getCart = async (accessToken: string): Promise<CartItemResponse[]> => {
-  const response = await fetch(`${API_BASE_URL}/auth/cart/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/cart/`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -249,7 +260,7 @@ export const addToCartAPI = async (
   selectedSize: string,
   selectedColor: string
 ): Promise<CartItemResponse> => {
-  const response = await fetch(`${API_BASE_URL}/auth/cart/add/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/cart/add/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -272,7 +283,7 @@ export const addToCartAPI = async (
 };
 
 export const updateCartItem = async (accessToken: string, itemId: number, quantity: number): Promise<CartItemResponse> => {
-  const response = await fetch(`${API_BASE_URL}/auth/cart/update/${itemId}/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/cart/update/${itemId}/`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -290,7 +301,7 @@ export const updateCartItem = async (accessToken: string, itemId: number, quanti
 };
 
 export const removeFromCartAPI = async (accessToken: string, itemId: number): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/auth/cart/remove/${itemId}/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/cart/remove/${itemId}/`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -305,7 +316,7 @@ export const removeFromCartAPI = async (accessToken: string, itemId: number): Pr
 };
 
 export const clearCartAPI = async (accessToken: string): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/auth/cart/clear/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/cart/clear/`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -358,7 +369,7 @@ export const getProductReviews = async (productId: number, accessToken?: string 
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/auth/products/${productId}/reviews/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/products/${productId}/reviews/`, {
     method: 'GET',
     headers,
   });
@@ -372,7 +383,7 @@ export const getProductReviews = async (productId: number, accessToken?: string 
 
 // Create or update review (requires auth)
 export const createReview = async (accessToken: string, data: ReviewCreateData): Promise<Review> => {
-  const response = await fetch(`${API_BASE_URL}/auth/reviews/create/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/reviews/create/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -391,7 +402,7 @@ export const createReview = async (accessToken: string, data: ReviewCreateData):
 
 // Delete user's own review
 export const deleteReview = async (accessToken: string, reviewId: number): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/auth/reviews/${reviewId}/delete/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/reviews/${reviewId}/delete/`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -407,7 +418,7 @@ export const deleteReview = async (accessToken: string, reviewId: number): Promi
 
 // Get user's reviews
 export const getUserReviews = async (accessToken: string): Promise<Review[]> => {
-  const response = await fetch(`${API_BASE_URL}/auth/reviews/my/`, {
+  const response = await apiFetch(`${API_BASE_URL}/auth/reviews/my/`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -421,3 +432,4 @@ export const getUserReviews = async (accessToken: string): Promise<Review[]> => 
 
   return await response.json();
 };
+

@@ -1,5 +1,6 @@
 
 from django.db import models
+from decimal import Decimal
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.hashers import make_password, check_password as django_check_password
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -245,9 +246,9 @@ class Order(models.Model):
     shipping_postal_code = models.CharField(max_length=20, blank=True, null=True)
     shipping_country = models.CharField(max_length=100, default='')
 
-    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    shipping_cost = models.DecimalField(max_digits=8, decimal_places=2, default=0)
-    total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    shipping_cost = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal('0.00'))
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
 
     notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -264,7 +265,8 @@ class Order(models.Model):
             owner = self.user.username
         else:
             owner = self.guest_email or 'Guest'
-        return f"Order #{self.id} by {owner} - {self.status}"
+        order_id = self.pk if self.pk is not None else 'new'
+        return f"Order #{order_id} by {owner} - {self.status}"
 
 
 class SSLPayment(models.Model):
@@ -311,7 +313,7 @@ class OrderItem(models.Model):
     quantity = models.PositiveIntegerField(default=1)
     selected_size = models.CharField(max_length=20, blank=True, null=True)
     selected_color = models.CharField(max_length=50, blank=True, null=True)
-    line_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    line_total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
 
     class Meta:
         db_table = 'order_items'
@@ -319,7 +321,8 @@ class OrderItem(models.Model):
         verbose_name_plural = 'Order Items'
 
     def __str__(self):
-        return f"Order #{self.order.id} - {self.product_name} x{self.quantity}"
+        order_id = self.order.pk if self.order and self.order.pk is not None else 'new'
+        return f"Order #{order_id} - {self.product_name} x{self.quantity}"
 
     def save(self, *args, **kwargs):
         self.line_total = self.product_price * self.quantity

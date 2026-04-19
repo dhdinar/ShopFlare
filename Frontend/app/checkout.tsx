@@ -1,4 +1,4 @@
-import { StyleSheet, View, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { ThemedText } from '@/components/themed-text';
@@ -9,7 +9,15 @@ import { ShopFlareColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useFashion } from '@/context/FashionContext';
 import { getAddresses, Address } from '@/services/profileService';
-import { checkout, guestCheckout, saveGuestOrderRef, CheckoutData, GuestCheckoutData } from '@/services/orderService';
+import {
+  checkout,
+  guestCheckout,
+  checkoutInitPayment,
+  guestCheckoutInitPayment,
+  saveGuestOrderRef,
+  CheckoutData,
+  GuestCheckoutData,
+} from '@/services/orderService';
 import { formatTk } from '@/utils/currency';
 import { calculateShippingCharge } from '@/utils/shipping';
 
@@ -20,7 +28,7 @@ export default function CheckoutScreen() {
 
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'card' | 'wallet'>('cod');
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'online'>('cod');
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isPlacing, setIsPlacing] = useState(false);
@@ -137,7 +145,27 @@ export default function CheckoutScreen() {
           payment_method: paymentMethod,
           notes: notes.trim() || undefined,
         };
-        order = await checkout(accessToken, checkoutData);
+
+        if (paymentMethod === 'cod') {
+          order = await checkout(accessToken, checkoutData);
+
+          // Cart is already cleared by the backend; refresh local state
+          await clearCart();
+          await fetchProducts(); // refresh stock
+
+          setPlacedOrderId(order.id);
+          setMessageType('success');
+          setFormMessage(`Your order #${order.id} has been placed successfully.`);
+          router.replace(`/orderDetail?id=${order.id}`);
+          return;
+        }
+
+        const paymentInit = await checkoutInitPayment(accessToken, checkoutData);
+        order = paymentInit.order;
+        setMessageType('info');
+        setFormMessage(`Continue payment in SSLCommerz. Your order will appear after successful payment.`);
+        await Linking.openURL(paymentInit.payment_url);
+        return;
       } else {
         const guestData: GuestCheckoutData = {
           guest_email: guestEmail,
@@ -167,20 +195,24 @@ export default function CheckoutScreen() {
           })(),
         };
 
-        order = await guestCheckout(guestData);
-      }
+        if (paymentMethod === 'cod') {
+          order = await guestCheckout(guestData);
 
-      // Cart is already cleared by the backend; refresh local state
-      await clearCart();
-      await fetchProducts(); // refresh stock
+          // Cart is already cleared by the backend; refresh local state
+          await clearCart();
+          await fetchProducts(); // refresh stock
 
-      setPlacedOrderId(order.id);
-      setMessageType('success');
-      setFormMessage(`Your order #${order.id} has been placed successfully.`);
-
-      if (accessToken) {
-        router.replace(`/orderDetail?id=${order.id}`);
-        return;
+          setPlacedOrderId(order.id);
+          setMessageType('success');
+          setFormMessage(`Your order #${order.id} has been placed successfully.`);
+        } else {
+          const paymentInit = await guestCheckoutInitPayment(guestData);
+          order = paymentInit.order;
+          setMessageType('info');
+          setFormMessage(`Continue payment in SSLCommerz. Your order will appear after successful payment.`);
+          await Linking.openURL(paymentInit.payment_url);
+          return;
+        }
       }
 
       await saveGuestOrderRef(order);
@@ -198,8 +230,7 @@ export default function CheckoutScreen() {
 
   const paymentMethods = [
     { key: 'cod' as const, label: 'Cash on Delivery', icon: 'cash-outline' as const },
-    { key: 'card' as const, label: 'Credit / Debit Card', icon: 'card-outline' as const },
-    { key: 'wallet' as const, label: 'Wallet', icon: 'wallet-outline' as const },
+    { key: 'online' as const, label: 'Pay Online (SSLCommerz)', icon: 'card-outline' as const },
   ];
 
   if (isLoading) {
@@ -460,7 +491,9 @@ export default function CheckoutScreen() {
           ) : (
             <>
               <Ionicons name="checkmark-circle" size={22} color={ShopFlareColors.secondary} />
-              <ThemedText style={styles.placeOrderText}>Place Order</ThemedText>
+              <ThemedText style={styles.placeOrderText}>
+                {paymentMethod === 'cod' ? 'Place Order' : 'Pay with SSLCommerz'}
+              </ThemedText>
             </>
           )}
         </TouchableOpacity>

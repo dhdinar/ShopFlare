@@ -107,7 +107,7 @@ export default function HelpSupportScreen() {
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={styles.quickBtn}
-            onPress={() => Linking.openURL('mailto:support@shopflare.com')}
+            onPress={() => Linking.openURL('mailto:delowerhossin218@gmail.com')}
           >
             <View style={styles.quickIcon}>
               <Ionicons name="mail-outline" size={22} color={ShopFlareColors.primary} />
@@ -116,7 +116,7 @@ export default function HelpSupportScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickBtn}
-            onPress={() => Linking.openURL('tel:+10000000000')}
+            onPress={() => Linking.openURL('tel:+8801755378017')}
           >
             <View style={styles.quickIcon}>
               <Ionicons name="call-outline" size={22} color={ShopFlareColors.primary} />
@@ -125,7 +125,7 @@ export default function HelpSupportScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickBtn}
-            onPress={() => Linking.openURL('https://shopflare.com/chat')}
+            onPress={() => Linking.openURL('https://django-ngrok-proxy.onrender.com/health/live/')}
           >
             <View style={styles.quickIcon}>
               <Ionicons name="chatbubble-outline" size={22} color={ShopFlareColors.primary} />
@@ -146,42 +146,7 @@ export default function HelpSupportScreen() {
         </View>
 
         {/* Contact Form */}
-        <ThemedText style={styles.sectionLabel}>Send Us a Message</ThemedText>
-        <View style={styles.contactCard}>
-          <View style={styles.fieldGroup}>
-            <ThemedText style={styles.label}>Subject</ThemedText>
-            <TextInput
-              style={styles.input}
-              value={subject}
-              onChangeText={setSubject}
-              placeholder="What is your issue about?"
-              placeholderTextColor={ShopFlareColors.textLight}
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <ThemedText style={styles.label}>Message</ThemedText>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={message}
-              onChangeText={setMessage}
-              placeholder="Describe your issue in detail..."
-              placeholderTextColor={ShopFlareColors.textLight}
-              multiline
-              numberOfLines={5}
-            />
-          </View>
-          <TouchableOpacity
-            style={styles.sendButton}
-            onPress={handleSend}
-            disabled={sending}
-          >
-            {sending ? (
-              <ActivityIndicator color={ShopFlareColors.secondary} />
-            ) : (
-              <ThemedText style={styles.sendButtonText}>Send Message</ThemedText>
-            )}
-          </TouchableOpacity>
-        </View>
+        
 
         {/* Footer info */}
         <View style={styles.footer}>

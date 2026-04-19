@@ -165,16 +165,7 @@ export default function CartScreen() {
               );
             })}
             
-            {/* Promo Code */}
-            <View style={styles.promoContainer}>
-              <View style={styles.promoInput}>
-                <Ionicons name="pricetag-outline" size={20} color={ShopFlareColors.textSecondary} />
-                <ThemedText style={styles.promoPlaceholder}>Enter promo code</ThemedText>
-              </View>
-              <TouchableOpacity style={styles.applyButton}>
-                <ThemedText style={styles.applyButtonText}>Apply</ThemedText>
-              </TouchableOpacity>
-            </View>
+            
             
             <View style={{ height: 200 }} />
           </ScrollView>

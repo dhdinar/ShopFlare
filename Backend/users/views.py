@@ -20,6 +20,7 @@ from urllib import error as urllib_error
 import hashlib
 import json
 import secrets
+from typing import Any, Dict, cast
 
 
 from .serializers import (UserSerializer, BrandSerializer, RegisterSerializer,
@@ -44,6 +45,60 @@ VERIFICATION_MAX_ATTEMPTS = 5
 PASSWORD_RESET_CODE_EXPIRY_MINUTES = 10
 PASSWORD_RESET_RESEND_COOLDOWN_SECONDS = 60
 PASSWORD_RESET_MAX_ATTEMPTS = 5
+
+
+def _validated_data(serializer) -> Dict[str, Any]:
+    """Return serializer.validated_data with a concrete mapping type for type checkers."""
+    return cast(Dict[str, Any], serializer.validated_data)
+
+
+def _is_account_verified(target: Any, user_type: str) -> bool:
+    if user_type == 'user':
+        return bool(getattr(target, 'is_email_verified', False))
+    return bool(getattr(target, 'is_brand_verified', False))
+
+
+def _mark_account_verified(target: Any, user_type: str) -> bool:
+    if user_type == 'user':
+        if not bool(getattr(target, 'is_email_verified', False)):
+            setattr(target, 'is_email_verified', True)
+            target.save(update_fields=['is_email_verified'])
+            return True
+        return False
+
+    if not bool(getattr(target, 'is_brand_verified', False)):
+        setattr(target, 'is_brand_verified', True)
+        target.save(update_fields=['is_brand_verified'])
+        return True
+    return False
+
+
+def _is_user_email_verified(user: Any) -> bool:
+    return bool(getattr(user, 'is_email_verified', False))
+
+
+def _set_message_sender_brand(message: Message, brand: Any) -> None:
+    setattr(message, 'sender_brand', brand)
+
+
+def _set_message_receiver_brand(message: Message, brand: Any) -> None:
+    setattr(message, 'receiver_brand', brand)
+
+
+def _set_message_receiver_user(message: Message, user: Any) -> None:
+    setattr(message, 'receiver_user', user)
+
+
+def _model_int_id(obj: Any, attr_name: str) -> int | None:
+    value = getattr(obj, attr_name, None)
+    return value if isinstance(value, int) else None
+
+
+def _order_display_id(order: Any) -> str:
+    order_id = _model_int_id(order, 'id')
+    if order_id is not None:
+        return str(order_id)
+    return str(getattr(order, 'pk', ''))
 
 
 def _generate_verification_code():
@@ -335,14 +390,15 @@ def send_verification_code_view(request):
     """Send initial email verification code"""
     serializer = VerificationSendSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+    data = _validated_data(serializer)
 
-    email = serializer.validated_data['email']
-    user_type = serializer.validated_data['user_type']
+    email = data['email']
+    user_type = data['user_type']
     target = _get_verification_target(email, user_type)
     if not target:
         return Response({'detail': 'Account not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    is_verified = target.is_email_verified if user_type == 'user' else target.is_brand_verified
+    is_verified = _is_account_verified(target, user_type)
     if is_verified:
         return Response({'detail': 'Email already verified'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -356,14 +412,15 @@ def resend_verification_code_view(request):
     """Resend email verification code with cooldown"""
     serializer = VerificationSendSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+    data = _validated_data(serializer)
 
-    email = serializer.validated_data['email']
-    user_type = serializer.validated_data['user_type']
+    email = data['email']
+    user_type = data['user_type']
     target = _get_verification_target(email, user_type)
     if not target:
         return Response({'detail': 'Account not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    is_verified = target.is_email_verified if user_type == 'user' else target.is_brand_verified
+    is_verified = _is_account_verified(target, user_type)
     if is_verified:
         return Response({'detail': 'Email already verified'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -394,10 +451,11 @@ def verify_email_view(request):
     """Verify email using 6-digit code"""
     serializer = VerificationConfirmSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+    data = _validated_data(serializer)
 
-    email = serializer.validated_data['email']
-    user_type = serializer.validated_data['user_type']
-    code = serializer.validated_data['code']
+    email = data['email']
+    user_type = data['user_type']
+    code = data['code']
 
     target = _get_verification_target(email, user_type)
     if not target:
@@ -429,17 +487,7 @@ def verify_email_view(request):
     verification.is_used = True
     verification.save(update_fields=['is_used', 'updated_at'])
 
-    marked_verified = False
-    if user_type == 'user':
-        if not target.is_email_verified:
-            target.is_email_verified = True
-            target.save(update_fields=['is_email_verified'])
-            marked_verified = True
-    else:
-        if not target.is_brand_verified:
-            target.is_brand_verified = True
-            target.save(update_fields=['is_brand_verified'])
-            marked_verified = True
+    marked_verified = _mark_account_verified(target, user_type)
 
     if marked_verified:
         _send_account_created_email(target.email)
@@ -453,8 +501,9 @@ def forgot_password_request_view(request):
     """Send password reset code to account email"""
     serializer = ForgotPasswordRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+    data = _validated_data(serializer)
 
-    email = serializer.validated_data['email']
+    email = data['email']
     target, user_type = _get_account_by_email(email)
 
     # Do not reveal whether account exists
@@ -488,10 +537,11 @@ def forgot_password_confirm_view(request):
     """Confirm password reset code and set a new password"""
     serializer = ForgotPasswordConfirmSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+    data = _validated_data(serializer)
 
-    email = serializer.validated_data['email']
-    code = serializer.validated_data['code']
-    new_password = serializer.validated_data['new_password']
+    email = data['email']
+    code = data['code']
+    new_password = data['new_password']
 
     target, user_type = _get_account_by_email(email)
     if not target:
@@ -540,9 +590,10 @@ def login_view(request):
     """User/Brand login endpoint - checks both tables"""
     serializer = LoginSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+    data = _validated_data(serializer)
     
-    username = serializer.validated_data['username']
-    password = serializer.validated_data['password']
+    username = data['username']
+    password = data['password']
     
     # First, try to authenticate as a regular user
     user = authenticate(username=username, password=password)
@@ -554,7 +605,7 @@ def login_view(request):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-        if not user.is_email_verified:
+        if not _is_user_email_verified(user):
             return Response(
                 {
                     'detail': 'Email not verified. Please verify your email before logging in.',
@@ -812,7 +863,7 @@ def product_update_view(request, product_id):
     images_data = request.data.get('images', [])
     if images_data:
         # Check total count (existing + new)
-        existing_count = product.images.count()
+        existing_count = ProductImage.objects.filter(product=product).count()
         if existing_count + len(images_data) > 4:
             return Response({'detail': f'Maximum 4 images allowed. You have {existing_count} images.'}, 
                           status=status.HTTP_400_BAD_REQUEST)
@@ -1108,12 +1159,13 @@ def review_create_view(request):
         # Create new review
         serializer = ReviewCreateSerializer(data=request.data)
         if serializer.is_valid():
+            data = _validated_data(serializer)
             review = Review.objects.create(
                 user=request.user,
                 product=product,
-                rating=serializer.validated_data.get('rating', 5),
-                title=serializer.validated_data.get('title', ''),
-                comment=serializer.validated_data.get('comment', '')
+                rating=data.get('rating', 5),
+                title=data.get('title', ''),
+                comment=data.get('comment', '')
             )
             return Response(ReviewSerializer(review).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1257,10 +1309,10 @@ def send_message_view(request):
     msg = Message(product=product, message=message_text)
 
     if is_brand:
-        msg.sender_brand = user.brand
+        _set_message_sender_brand(msg, user.brand)
 
         if receiver_user:
-            msg.receiver_user = receiver_user
+            _set_message_receiver_user(msg, receiver_user)
         else:
             # Fallback for older clients: infer target user only when exactly one participant exists.
             participant_ids = set()
@@ -1275,7 +1327,8 @@ def send_message_view(request):
                     participant_ids.add(receiver_id)
 
             if len(participant_ids) == 1:
-                msg.receiver_user = CustomUser.objects.filter(id=next(iter(participant_ids))).first()
+                inferred_receiver = CustomUser.objects.filter(id=next(iter(participant_ids))).first()
+                _set_message_receiver_user(msg, inferred_receiver)
             else:
                 return Response(
                     {'detail': 'receiver_username is required for brand messages in multi-user product chats'},
@@ -1286,11 +1339,11 @@ def send_message_view(request):
     elif receiver_user:
         # User-to-user message
         msg.sender_user = user
-        msg.receiver_user = receiver_user
+        _set_message_receiver_user(msg, receiver_user)
         msg.is_from_brand = False
     else:
         msg.sender_user = user
-        msg.receiver_brand = product.brand
+        _set_message_receiver_brand(msg, product.brand)
         msg.is_from_brand = False
 
     msg.save()
@@ -1306,6 +1359,7 @@ def conversations_list_view(request):
 
     user = request.user
     is_brand = isinstance(user, BrandUser)
+    brand = user.brand if is_brand else None
 
     if is_brand:
         brand = user.brand
@@ -1359,29 +1413,33 @@ def conversations_list_view(request):
         convo_key, _, _ = get_conversation_meta(msg)
         is_unread_for_current_user = False
         if is_brand:
-            is_unread_for_current_user = (msg.receiver_brand_id == brand.id and not msg.is_read)
+            receiver_brand_id = _model_int_id(msg, 'receiver_brand_id')
+            is_unread_for_current_user = bool(brand and receiver_brand_id == brand.id and not msg.is_read)
         else:
-            is_unread_for_current_user = (msg.receiver_user_id == user.id and not msg.is_read)
+            receiver_user_id = _model_int_id(msg, 'receiver_user_id')
+            is_unread_for_current_user = bool(receiver_user_id == user.id and not msg.is_read)
 
         if is_unread_for_current_user:
             unread_counts[convo_key] = unread_counts.get(convo_key, 0) + 1
 
     seen_convos = OrderedDict()
     for msg in msgs:
-        pid = msg.product_id
+        pid = _model_int_id(msg, 'product_id')
         product = msg.product
         convo_key, chat_type, other_name = get_conversation_meta(msg)
 
         if is_brand:
-            is_last_from_me = (msg.sender_brand_id == brand.id)
+            sender_brand_id = _model_int_id(msg, 'sender_brand_id')
+            is_last_from_me = bool(brand and sender_brand_id == brand.id)
         else:
-            is_last_from_me = (msg.sender_user_id == user.id)
+            sender_user_id = _model_int_id(msg, 'sender_user_id')
+            is_last_from_me = bool(sender_user_id == user.id)
 
         if convo_key not in seen_convos:
             # Get product image
             product_image = None
             try:
-                first_img = product.images.first()
+                first_img = ProductImage.objects.filter(product=product).order_by('order', 'created_at').first()
                 if first_img and first_img.image_data:
                     product_image = f"data:{first_img.image_type};base64,{first_img.image_data}"
             except Exception:
@@ -1448,10 +1506,10 @@ def send_message_to_brand_view(request):
         is_from_brand=is_brand,
     )
     if is_brand:
-        msg.sender_brand = brand
+        _set_message_sender_brand(msg, brand)
     else:
         msg.sender_user = user
-        msg.receiver_brand = brand
+        _set_message_receiver_brand(msg, brand)
     msg.save()
 
     if not is_brand:
@@ -1521,7 +1579,13 @@ def notifications_mark_all_read_view(request):
     return Response({'updated': updated})
 
 
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse
+from django.http.response import HttpResponseRedirectBase
+
+
+class AppRedirect(HttpResponseRedirectBase):
+    # Allow deep-link redirects back to the mobile app.
+    allowed_schemes = HttpResponseRedirectBase.allowed_schemes + ['shopflare']
 
 # ==================== Address Views ====================
 
@@ -1576,12 +1640,13 @@ def change_password_view(request):
     """Change password for authenticated customer"""
     serializer = ChangePasswordSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+    data = _validated_data(serializer)
 
     user = request.user
-    if not user.check_password(serializer.validated_data['old_password']):
+    if not user.check_password(data['old_password']):
         return Response({'detail': 'Old password is incorrect'}, status=status.HTTP_400_BAD_REQUEST)
 
-    user.set_password(serializer.validated_data['new_password'])
+    user.set_password(data['new_password'])
     user.save()
     return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
 
@@ -1685,8 +1750,13 @@ def brand_analytics_view(request):
         .order_by('-saves')[:5]
     )
     top_products_data = [
-        {'id': p.id, 'name': p.name, 'price': str(p.price), 'saves': p.saves}
-        for p in top_products
+        {
+            'id': p['id'],
+            'name': p['name'],
+            'price': str(p['price']),
+            'saves': int(p.get('saves') or 0),
+        }
+        for p in top_products.values('id', 'name', 'price', 'saves')
     ]
 
     return Response({
@@ -1756,6 +1826,48 @@ def _should_redirect_to_app(request):
 
     accept_header = request.META.get('HTTP_ACCEPT', '')
     return 'text/html' in accept_header.lower()
+
+
+def _app_redirect_response(redirect_url, title='Returning to ShopFlare'):
+        if not redirect_url:
+                return Response({'detail': 'Redirect URL is missing'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Use an HTML handoff page because some payment/browser flows block direct custom-scheme redirects.
+        safe_url_json = json.dumps(redirect_url)
+        html = f"""
+<!doctype html>
+<html>
+    <head>
+        <meta charset=\"utf-8\" />
+        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+        <title>{title}</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; background:#f8fafc; color:#111827; margin:0; }}
+            .wrap {{ max-width: 520px; margin: 64px auto; padding: 24px; background:#fff; border-radius:14px; box-shadow: 0 8px 24px rgba(0,0,0,.08); text-align:center; }}
+            h1 {{ font-size: 20px; margin: 0 0 12px; }}
+            p {{ color:#4b5563; margin: 0 0 18px; }}
+            a {{ display:inline-block; padding:10px 16px; border-radius:10px; background:#111827; color:#fff; text-decoration:none; font-weight:600; }}
+        </style>
+    </head>
+    <body>
+        <div class=\"wrap\">
+            <h1>{title}</h1>
+            <p>If the app does not open automatically, tap the button below.</p>
+            <a id=\"open-app\" href={safe_url_json}>Open ShopFlare App</a>
+        </div>
+        <script>
+            const deepLink = {safe_url_json};
+            window.location.href = deepLink;
+            setTimeout(() => {{ window.location.replace(deepLink); }}, 500);
+            setTimeout(() => {{
+                const btn = document.getElementById('open-app');
+                if (btn) btn.focus();
+            }}, 1200);
+        </script>
+    </body>
+</html>
+"""
+        return HttpResponse(html)
 
 
 def _post_form(url, payload):
@@ -1862,7 +1974,7 @@ def _complete_paid_order(payment, gateway_val_id='', gateway_payload=None):
 
     order = payment.order
     if order.payment_status == 'paid':
-        if order.user_id:
+        if _model_int_id(order, 'user_id') is not None:
             CartItem.objects.filter(user=order.user).delete()
         return {'ok': True, 'already_paid': True}
 
@@ -1870,18 +1982,20 @@ def _complete_paid_order(payment, gateway_val_id='', gateway_payload=None):
         locked_payment = SSLPayment.objects.select_for_update().select_related('order').get(id=payment.id)
         locked_order = locked_payment.order
         if locked_order.payment_status == 'paid' or locked_payment.status == 'paid':
-            if locked_order.user_id:
+            if _model_int_id(locked_order, 'user_id') is not None:
                 CartItem.objects.filter(user=locked_order.user).delete()
             return {'ok': True, 'already_paid': True}
 
-        items = list(locked_order.items.select_related('product', 'brand'))
-        product_ids = [item.product_id for item in items if item.product_id]
-        product_map = {p.id: p for p in Product.objects.select_for_update().filter(id__in=product_ids)}
+        items = list(OrderItem.objects.filter(order=locked_order).select_related('product', 'brand'))
+        product_ids = [pid for item in items if (pid := _model_int_id(item, 'product_id')) is not None]
+        locked_products = list(Product.objects.select_for_update().filter(id__in=product_ids))
+        product_map = {pid: p for p in locked_products if (pid := _model_int_id(p, 'id')) is not None}
 
         for item in items:
-            if not item.product_id:
+            product_id = _model_int_id(item, 'product_id')
+            if product_id is None:
                 continue
-            product = product_map.get(item.product_id)
+            product = product_map.get(product_id)
             if not product or product.stock < item.quantity:
                 locked_order.payment_status = 'failed'
                 locked_order.status = 'cancelled'
@@ -1895,9 +2009,10 @@ def _complete_paid_order(payment, gateway_val_id='', gateway_payload=None):
                 return {'ok': False, 'error': f'Insufficient stock for "{item.product_name}" during payment confirmation.'}
 
         for item in items:
-            if not item.product_id:
+            product_id = _model_int_id(item, 'product_id')
+            if product_id is None:
                 continue
-            product = product_map[item.product_id]
+            product = product_map[product_id]
             product.stock -= item.quantity
             product.save(update_fields=['stock'])
 
@@ -1913,21 +2028,23 @@ def _complete_paid_order(payment, gateway_val_id='', gateway_payload=None):
             locked_payment.gateway_raw_response = json.dumps(gateway_payload)
         locked_payment.save(update_fields=['status', 'paid_at', 'gateway_val_id', 'gateway_raw_response', 'updated_at'])
 
-        if locked_order.user_id:
+        if _model_int_id(locked_order, 'user_id') is not None:
             CartItem.objects.filter(user=locked_order.user).delete()
+
+    order_display_id = _order_display_id(locked_order)
 
     create_user_notification(
         locked_order.user,
-        title=f'Payment successful for order #{locked_order.id}',
+        title=f'Payment successful for order #{order_display_id}',
         body='Your payment has been completed and the order is confirmed.',
         notification_type='order',
         related_order=locked_order,
     )
-    brand_ids = set(locked_order.items.exclude(brand__isnull=True).values_list('brand_id', flat=True))
+    brand_ids = set(OrderItem.objects.filter(order=locked_order, brand__isnull=False).values_list('brand_id', flat=True))
     for brand in Brand.objects.filter(id__in=brand_ids):
         create_brand_notification(
             brand,
-            title=f'Paid order #{locked_order.id}',
+            title=f'Paid order #{order_display_id}',
             body='A new paid order containing your product(s) has been confirmed.',
             notification_type='order',
             related_order=locked_order,
@@ -1985,7 +2102,7 @@ def guest_checkout_view(request):
 
     serializer = GuestCheckoutSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    data = serializer.validated_data
+    data = _validated_data(serializer)
 
     shipping = {
         'shipping_full_name': data.get('shipping_full_name', ''),
@@ -2000,9 +2117,8 @@ def guest_checkout_view(request):
 
     raw_items = data.get('items', [])
     product_ids = [item['product_id'] for item in raw_items]
-    product_map = {
-        p.id: p for p in Product.objects.filter(id__in=product_ids, is_active=True).select_related('brand')
-    }
+    products = list(Product.objects.filter(id__in=product_ids, is_active=True).select_related('brand'))
+    product_map = {pid: p for p in products if (pid := _model_int_id(p, 'id')) is not None}
 
     resolved_items = []
     for raw_item in raw_items:
@@ -2033,7 +2149,7 @@ def guest_checkout_view(request):
 
     payment_method = data.get('payment_method', 'cod')
 
-    if payment_method == 'card':
+    if payment_method == 'online':
         order = Order.objects.create(
             user=None,
             guest_checkout=True,
@@ -2049,7 +2165,7 @@ def guest_checkout_view(request):
         )
         payment = SSLPayment.objects.create(
             order=order,
-            transaction_id=_generate_transaction_id(order.id),
+            transaction_id=_generate_transaction_id(_order_display_id(order)),
             payment_gateway='sslcommerz',
             status='pending',
             amount=order.total_amount,
@@ -2071,6 +2187,9 @@ def guest_checkout_view(request):
         payment_init = _initialize_ssl_payment(request, order, payment)
         if not payment_init.get('ok'):
             # If gateway init fails, treat it as no order placement for online flow.
+            payment.status = 'failed'
+            payment.gateway_raw_response = json.dumps(payment_init)
+            payment.save(update_fields=['status', 'gateway_raw_response', 'updated_at'])
             order.delete()
             return Response({'detail': payment_init.get('error', 'Payment initialization failed.')}, status=status.HTTP_502_BAD_GATEWAY)
 
@@ -2085,9 +2204,8 @@ def guest_checkout_view(request):
         )
 
     with transaction.atomic():
-        locked_products = {
-            p.id: p for p in Product.objects.select_for_update().filter(id__in=product_ids)
-        }
+        locked_products_list = list(Product.objects.select_for_update().filter(id__in=product_ids))
+        locked_products = {pid: p for p in locked_products_list if (pid := _model_int_id(p, 'id')) is not None}
 
         for product, item in resolved_items:
             locked_product = locked_products[product.id]
@@ -2136,7 +2254,7 @@ def checkout_view(request):
 
     serializer = CheckoutSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    data = serializer.validated_data
+    data = _validated_data(serializer)
 
     # Resolve shipping address
     address_id = data.get('address_id')
@@ -2180,8 +2298,17 @@ def checkout_view(request):
             )
 
     # Calculate totals
+    def _product_price(item):
+        product = getattr(item, 'product', None)
+        if product is None:
+            return 0
+        sale_price = getattr(product, 'sale_price', None)
+        is_on_sale = getattr(product, 'is_on_sale', False)
+        price = getattr(product, 'price', None)
+        return (sale_price if is_on_sale and sale_price is not None else price) or 0
+
     subtotal = sum(
-        (item.product.sale_price if item.product.is_on_sale else item.product.price) * item.quantity
+        _product_price(item) * item.quantity
         for item in cart_items
     )
     BASE_SHIPPING_COST = Decimal('60.00')
@@ -2191,7 +2318,7 @@ def checkout_view(request):
 
     payment_method = data.get('payment_method', 'cod')
 
-    if payment_method == 'card':
+    if payment_method == 'online':
         order = Order.objects.create(
             user=request.user,
             payment_method=payment_method,
@@ -2204,7 +2331,7 @@ def checkout_view(request):
         )
         payment = SSLPayment.objects.create(
             order=order,
-            transaction_id=_generate_transaction_id(order.id),
+            transaction_id=_generate_transaction_id(_model_int_id(order, 'id')),
             payment_gateway='sslcommerz',
             status='pending',
             amount=order.total_amount,
@@ -2226,6 +2353,9 @@ def checkout_view(request):
         payment_init = _initialize_ssl_payment(request, order, payment)
         if not payment_init.get('ok'):
             # If gateway init fails, treat it as no order placement for online flow.
+            payment.status = 'failed'
+            payment.gateway_raw_response = json.dumps(payment_init)
+            payment.save(update_fields=['status', 'gateway_raw_response', 'updated_at'])
             order.delete()
             return Response({'detail': payment_init.get('error', 'Payment initialization failed.')}, status=status.HTTP_502_BAD_GATEWAY)
 
@@ -2242,12 +2372,12 @@ def checkout_view(request):
     # Use atomic transaction to prevent partial failures
     with transaction.atomic():
         # Lock product rows to prevent race conditions
-        product_ids = [item.product_id for item in cart_items]
-        products = {p.id: p for p in Product.objects.select_for_update().filter(id__in=product_ids)}
+        product_ids = [item.product.pk for item in cart_items]
+        products = {p.pk: p for p in Product.objects.select_for_update().filter(pk__in=product_ids)}
 
         # Re-check stock with locked rows
         for item in cart_items:
-            product = products[item.product_id]
+            product = products[item.product.pk]  # Use item.product.pk if item.product_id is not available
             if product.stock < item.quantity:
                 return Response(
                     {'detail': f'Insufficient stock for "{product.name}". Available: {product.stock}'},
@@ -2267,7 +2397,7 @@ def checkout_view(request):
 
         # Create order items and deduct stock
         for item in cart_items:
-            product = products[item.product_id]
+            product = products[item.product.pk]
             unit_price = product.sale_price if product.is_on_sale else product.price
             OrderItem.objects.create(
                 order=order,
@@ -2287,17 +2417,17 @@ def checkout_view(request):
 
     create_user_notification(
         request.user,
-        title=f'Order #{order.id} placed',
+        title=f'Order #{order.id} placed',  # type: ignore[attr-defined]
         body='Your order has been placed successfully.',
         notification_type='order',
         related_order=order,
     )
 
-    brand_ids = set(order.items.exclude(brand__isnull=True).values_list('brand_id', flat=True))
+    brand_ids = set(order.items.exclude(brand__isnull=True).values_list('brand_id', flat=True))  # type: ignore[attr-defined]
     for brand in Brand.objects.filter(id__in=brand_ids):
         create_brand_notification(
             brand,
-            title=f'New order #{order.id}',
+            title=f'New order #{order.id}',  # type: ignore[attr-defined]
             body='You received a new order containing your product(s).',
             notification_type='order',
             related_order=order,
@@ -2318,8 +2448,11 @@ def _handle_ssl_payment_success(request):
         return Response({'detail': 'Order not found for transaction'}, status=status.HTTP_404_NOT_FOUND)
     order = payment.order
 
+    if not order:
+        return Response({'detail': 'Order is no longer available for this transaction'}, status=status.HTTP_404_NOT_FOUND)
+
     if order.payment_status == 'paid' or payment.status == 'paid':
-        return Response({'message': 'Payment already processed', 'order_id': order.id}, status=status.HTTP_200_OK)
+        return Response({'message': 'Payment already processed', 'order_id': order.id}, status=status.HTTP_200_OK)  # type: ignore[attr-defined]
 
     val_id = payload.get('val_id', '')
     try:
@@ -2358,37 +2491,49 @@ def _handle_ssl_payment_success(request):
         payment.gateway_val_id = val_id or None
         payment.gateway_raw_response = json.dumps(validated)
         payment.save(update_fields=['status', 'gateway_val_id', 'gateway_raw_response', 'updated_at'])
+        order.delete()
         return Response({'detail': 'Payment status is not valid'}, status=status.HTTP_400_BAD_REQUEST)
 
     completed = _complete_paid_order(payment, gateway_val_id=val_id, gateway_payload=validated)
     if not completed.get('ok'):
         return Response({'detail': completed.get('error', 'Could not finalize paid order')}, status=status.HTTP_409_CONFLICT)
 
-    return Response({'message': 'Payment successful', 'order_id': order.id}, status=status.HTTP_200_OK)
+    return Response({'message': 'Payment successful', 'order_id': order.id}, status=status.HTTP_200_OK)  # type: ignore[attr-defined]
 
 
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 @parser_classes([JSONParser, FormParser, MultiPartParser])
 def ssl_payment_success_view(request):
+    payload = _extract_payment_payload(request)
+    transaction_id = payload.get('tran_id', '')
+
+    # Direct browser hits to success URL often have no callback payload.
+    # Redirect those to app fail route instead of returning raw 400 JSON.
+    if _should_redirect_to_app(request) and not transaction_id:
+        redirect_url = _build_app_redirect_url(
+            settings.APP_FAIL_URL,
+            order_id=None,
+            payment_status='failed',
+            transaction_id='',
+        )
+        if redirect_url:
+            return _app_redirect_response(redirect_url, title='Payment session missing')
+
     result = _handle_ssl_payment_success(request)
     if _should_redirect_to_app(request) and result.status_code == status.HTTP_200_OK:
-        payload = _extract_payment_payload(request)
-        transaction_id = payload.get('tran_id', '')
-        if not transaction_id:
-            return result
         payment = SSLPayment.objects.select_related('order').filter(transaction_id=transaction_id).first() if transaction_id else None
-        order_id = payment.order_id if payment else None
-        guest_token = payment.order.guest_access_token if payment and payment.order and payment.order.guest_checkout else ''
+        order_id = payment.order_id if payment else None  # type: ignore[attr-defined]
+        guest_token = payment.order.guest_access_token if payment and payment.order and payment.order.guest_checkout else ''  # type: ignore[attr-defined]
         redirect_url = _build_app_redirect_url(
             settings.APP_SUCCESS_URL,
             order_id=order_id,
             payment_status='paid',
             transaction_id=transaction_id,
-            guest_token=guest_token,
+            guest_token=guest_token,  # type: ignore[attr-defined]
         )
         if redirect_url:
-            return HttpResponseRedirect(redirect_url)
+            return _app_redirect_response(redirect_url, title='Payment successful')
     return result
 
 
@@ -2407,7 +2552,12 @@ def ssl_payment_fail_view(request):
         return Response({'detail': 'Order not found for transaction'}, status=status.HTTP_404_NOT_FOUND)
     order = payment.order
 
-    if order.payment_status != 'paid' and payment.status != 'paid':
+    if payment.status != 'paid':
+        payment.status = 'failed'
+        payment.gateway_raw_response = json.dumps(payload)
+        payment.save(update_fields=['status', 'gateway_raw_response', 'updated_at'])
+
+    if order and order.payment_status != 'paid' and payment.status != 'paid':
         # For online flow, failed payment means order should not remain placed.
         order.delete()
 
@@ -2419,7 +2569,7 @@ def ssl_payment_fail_view(request):
             transaction_id=transaction_id,
         )
         if redirect_url:
-            return HttpResponseRedirect(redirect_url)
+            return _app_redirect_response(redirect_url, title='Payment failed')
 
     return Response({'message': 'Payment marked as failed', 'order_id': None}, status=status.HTTP_200_OK)
 
@@ -2439,7 +2589,12 @@ def ssl_payment_cancel_view(request):
         return Response({'detail': 'Order not found for transaction'}, status=status.HTTP_404_NOT_FOUND)
     order = payment.order
 
-    if order.payment_status != 'paid' and payment.status != 'paid':
+    if payment.status != 'paid':
+        payment.status = 'cancelled'
+        payment.gateway_raw_response = json.dumps(payload)
+        payment.save(update_fields=['status', 'gateway_raw_response', 'updated_at'])
+
+    if order and order.payment_status != 'paid' and payment.status != 'paid':
         # For online flow, cancelled payment means order should not remain placed.
         order.delete()
 
@@ -2451,7 +2606,7 @@ def ssl_payment_cancel_view(request):
             transaction_id=transaction_id,
         )
         if redirect_url:
-            return HttpResponseRedirect(redirect_url)
+            return _app_redirect_response(redirect_url, title='Payment cancelled')
 
     return Response({'message': 'Payment cancelled', 'order_id': None}, status=status.HTTP_200_OK)
 
@@ -2470,7 +2625,7 @@ def order_list_view(request):
     orders = (
         Order.objects
         .filter(user=request.user)
-        .exclude(payment_method='card', payment_status__in=['pending', 'failed'])
+        .exclude(payment_method='online', payment_status__in=['pending', 'failed'])
         .prefetch_related('items')
     )
     serializer = OrderSerializer(orders, many=True)
@@ -2485,7 +2640,7 @@ def order_detail_view(request, order_id):
         order = (
             Order.objects
             .prefetch_related('items')
-            .exclude(payment_method='card', payment_status__in=['pending', 'failed'])
+            .exclude(payment_method='online', payment_status__in=['pending', 'failed'])
             .get(id=order_id, user=request.user)
         )
     except Order.DoesNotExist:
@@ -2505,7 +2660,7 @@ def guest_order_detail_view(request, order_id):
         order = (
             Order.objects
             .prefetch_related('items')
-            .exclude(payment_method='card', payment_status__in=['pending', 'failed'])
+            .exclude(payment_method='online', payment_status__in=['pending', 'failed'])
             .get(
                 id=order_id,
                 guest_checkout=True,
@@ -2537,7 +2692,7 @@ def order_cancel_view(request, order_id):
 
     # Restore stock atomically
     with transaction.atomic():
-        for item in order.items.select_related('product'):
+        for item in order.items.select_related('product'):  # type: ignore[attr-defined]
             if item.product:
                 item.product.stock += item.quantity
                 item.product.save(update_fields=['stock'])
@@ -2547,21 +2702,23 @@ def order_cancel_view(request, order_id):
 
     create_user_notification(
         request.user,
-        title=f'Order #{order.id} cancelled',
+        title=f'Order #{getattr(order, "id", "")} cancelled',
+        #title=f'Order #{order.id} cancelled',
         body='Your order has been cancelled successfully.',
         notification_type='order',
         related_order=order,
-    )
+    )  # type: ignore[attr-defined]
 
-    brand_ids = set(order.items.exclude(brand__isnull=True).values_list('brand_id', flat=True))
+    brand_ids = set(order.items.exclude(brand__isnull=True).values_list('brand_id', flat=True))  # type: ignore[attr-defined]
     for brand in Brand.objects.filter(id__in=brand_ids):
         create_brand_notification(
             brand,
-            title=f'Order #{order.id} cancelled',
+            title=f'Order #{getattr(order, "id", "")} cancelled',
+            #title=f'Order #{order.id} cancelled',
             body='A customer cancelled this order.',
             notification_type='order',
             related_order=order,
-        )
+        )  # type: ignore[attr-defined]
 
     return Response(OrderSerializer(order).data)
 
@@ -2580,7 +2737,7 @@ def brand_orders_view(request):
     orders = (
         Order.objects
         .filter(items__brand=brand)
-        .exclude(payment_method='card', payment_status__in=['pending', 'failed'])
+        .exclude(payment_method='online', payment_status__in=['pending', 'failed'])
         .prefetch_related('items')
         .distinct()
         .order_by('-created_at')
@@ -2601,7 +2758,7 @@ def brand_order_detail_view(request, order_id):
         order = (
             Order.objects
             .prefetch_related('items')
-            .exclude(payment_method='card', payment_status__in=['pending', 'failed'])
+            .exclude(payment_method='online', payment_status__in=['pending', 'failed'])
             .get(id=order_id, items__brand=brand)
         )
     except Order.DoesNotExist:
@@ -2624,14 +2781,16 @@ def brand_order_status_update_view(request, order_id):
 
     serializer = OrderStatusUpdateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+    data = _validated_data(serializer)
 
     order = Order.objects.get(id=order_id)
-    order.status = serializer.validated_data['status']
+    order.status = data['status']
     order.save(update_fields=['status', 'updated_at'])
 
     create_user_notification(
         order.user,
-        title=f'Order #{order.id} update',
+        title=f'Order #{data.get("order_id")} update',
+        #title=f'Order #{order.id} update',
         body=f'Your order status is now {order.status}.',
         notification_type='order',
         related_order=order,
