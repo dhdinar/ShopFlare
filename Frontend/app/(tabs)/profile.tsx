@@ -116,6 +116,16 @@ export default function ProfileScreen() {
             </View>
             <ThemedText style={styles.sectionSubtitle}>View sales and performance data</ThemedText>
           </TouchableOpacity>
+          
+            {/* Demand Predictor Section */}
+            <TouchableOpacity style={[styles.section, { backgroundColor: ShopFlareColors.infoLight }]} onPress={() => router.push('/demandPredictor')}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="trending-up-outline" size={24} color={ShopFlareColors.info} />
+                <ThemedText style={[styles.sectionTitle, { color: ShopFlareColors.info }]}>Demand Predictor</ThemedText>
+                <Ionicons name="chevron-forward-outline" size={20} color={ShopFlareColors.textLight} />
+              </View>
+              <ThemedText style={styles.sectionSubtitle}>Predict next week's demand for your products</ThemedText>
+            </TouchableOpacity>
 
           <ThemedText style={styles.sectionGroupTitle}>Security</ThemedText>
 
