@@ -14,15 +14,26 @@ import { useAuth } from '@/context/AuthContext';
 import { ThemedText } from '@/components/themed-text';
 
 import InlineMessage from '@/components/ui/inline-message';
+import { Image as RNImage } from 'react-native';
 import { ShopFlareColors } from '@/constants/theme';
 import * as productService from '@/services/productService';
+import { API_BASE_URL } from '@/services/productService';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+
+interface ProductImage {
+  id: number;
+  image_base64: string;
+  image_type: string;
+  order: number;
+  created_at: string;
+}
 
 interface Product {
   id: number;
   name: string;
   image?: string;
+  images?: ProductImage[];
   // add more product fields from your actual product model
 }
 
@@ -51,10 +62,15 @@ interface PredictionResponse {
 
 // ─── API ─────────────────────────────────────────────────────────────────────
 
-const PREDICTION_URL = 'http://192.168.0.98:8080/api/weekly-prediction/';
+//const BACKEND_URL = '${API_BASE_URL}/auth/get-ai-url/';
+//console.log('API_BASE_URL at runtime:', API_BASE_URL);
+//const BACKEND_URL = `${API_BASE_URL.replace(/\/api\/?$/, '')}/get-ai-url/`;
+const BACKEND_URL = API_BASE_URL + '/auth/get-ai-url/';
+//console.log('BACKEND_URL at runtime:', BACKEND_URL);
 
-async function fetchWeeklyPrediction(productIds: number[]): Promise<PredictionResponse> {
-  const response = await fetch(PREDICTION_URL, {
+
+async function fetchWeeklyPrediction(predictionUrl: string, productIds: number[]): Promise<PredictionResponse> {
+  const response = await fetch(predictionUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ product_ids: productIds }),
@@ -105,7 +121,7 @@ function PredictionBadge({ prediction, loading }: PredictionBadgeProps) {
     <View style={[badge.wrapper, { borderColor: color + '33', backgroundColor: color + '15' }]}>
       <Ionicons name="trending-up" size={13} color={color} />
       <ThemedText style={[badge.text, { color }]}>
-        {prediction.predicted_units_sold.toFixed(2)} units
+        {Math.ceil(prediction.predicted_units_sold)} units
       </ThemedText>
     </View>
   );
@@ -135,20 +151,34 @@ interface ProductCardProps {
 }
 
 function ProductCard({ product, prediction, predicting, onPredict, showExpanded }: ProductCardProps) {
+    // Debug log for product image
+    //console.log('Product image for product', product.id, ':', product.image, product.images?.[0]?.image_base64);
+    const images = Array.isArray(product.images) ? product.images : [];
   return (
     <View style={card.container}>
       <View style={card.row}>
         {/* Avatar */}
         <View style={card.avatar}>
-          <ThemedText style={card.avatarText}>
-            {product.name?.charAt(0)?.toUpperCase() ?? '#'}
-          </ThemedText>
+          {images.length > 0 && images[0].image_base64 ? (
+            <RNImage
+              source={{
+                uri: `data:${images[0].image_type || 'image/jpeg'};base64,${images[0].image_base64}`,
+              }}
+              style={{ width: 44, height: 44, borderRadius: 12 }}
+              resizeMode="cover"
+            />
+          ) : (
+            <ThemedText style={card.avatarText}>
+              {product.name && typeof product.name === 'string' && product.name.trim().length > 0
+                ? product.name.charAt(0).toUpperCase()
+                : '#'}
+            </ThemedText>
+          )}
         </View>
 
-        {/* Info */}
         <View style={card.info}>
           <ThemedText style={card.name} numberOfLines={1}>{product.name}</ThemedText>
-          <ThemedText style={card.id}>Product #{product.id}</ThemedText>
+          {/*<ThemedText style={card.id}>Product #{product.id}</ThemedText>*/}
         </View>
 
         {/* Predict button or badge */}
@@ -178,7 +208,7 @@ function ProductCard({ product, prediction, predicting, onPredict, showExpanded 
           <View style={card.expandedRow}>
             <ThemedText style={card.expandedLabel}>Predicted Units</ThemedText>
             <ThemedText style={[card.expandedValue, { color: getPredictionColor(prediction.predicted_units_sold) }]}>
-              {prediction.predicted_units_sold.toFixed(4)}
+              {Math.ceil(prediction.predicted_units_sold)}
             </ThemedText>
           </View>
           <View style={card.expandedRow}>
@@ -267,11 +297,11 @@ function ModelInfoCard({ model }: { model: PredictionModel }) {
         <View style={modelCard.body}>
           {[
             ['Trained At', formatDate(model.trained_at)],
-            ['Learning Rate', String(model.learning_rate)],
-            ['Epochs', String(model.epochs)],
+            //['Learning Rate', String(model.learning_rate)],
+            //['Epochs', String(model.epochs)],
             ['Final Loss', model.final_loss.toFixed(6)],
-            ['Rolling Feature', model.use_rolling_feature ? 'Yes' : 'No'],
-            ['Features', model.feature_names.join(', ')],
+            //['Rolling Feature', model.use_rolling_feature ? 'Yes' : 'No'],
+            //['Features', model.feature_names.join(', ')],
           ].map(([label, value]) => (
             <View key={label} style={modelCard.row}>
               <ThemedText style={modelCard.label}>{label}</ThemedText>
@@ -312,6 +342,15 @@ const modelCard = StyleSheet.create({
 export default function WeeklyPredictionScreen() {
   const { user, accessToken } = useAuth();
   const router = useRouter();
+
+  // Prediction URL state and fetch
+  const [PREDICTION_URL, setPredictionUrl] = useState<string | null>(null);
+  useEffect(() => {
+    fetch(BACKEND_URL)
+      .then(res => res.json())
+      .then(data => setPredictionUrl(data.ai_url))
+      .catch(() => setPredictionUrl(null));
+  }, []);
 
   // Products state — replace with your actual products fetch
   const [products, setProducts] = useState<Product[]>([]);
@@ -356,10 +395,15 @@ export default function WeeklyPredictionScreen() {
 
   // ── Single product predict ────────────────────────────────────────────────
   const handlePredict = async (productId: number) => {
+    if (!PREDICTION_URL) {
+      setMessageType('error');
+      setFormMessage('Prediction URL not loaded.');
+      return;
+    }
     setFormMessage('');
     setPredictingIds(prev => new Set(prev).add(productId));
     try {
-      const result = await fetchWeeklyPrediction([productId]);
+      const result = await fetchWeeklyPrediction(PREDICTION_URL, [productId]);
       if (result.status === 'ok' && result.predictions?.length) {
         setPredictions(prev => {
           const next = { ...prev };
@@ -386,11 +430,16 @@ export default function WeeklyPredictionScreen() {
   // ── Predict all ──────────────────────────────────────────────────────────
   const handlePredictAll = async () => {
     if (!products.length) return;
+    if (!PREDICTION_URL) {
+      setMessageType('error');
+      setFormMessage('Prediction URL not loaded.');
+      return;
+    }
     setFormMessage('');
     setPredictingAll(true);
     const ids = products.map(p => p.id);
     try {
-      const result = await fetchWeeklyPrediction(ids);
+      const result = await fetchWeeklyPrediction(PREDICTION_URL, ids);
       if (result.status === 'ok' && result.predictions?.length) {
         setPredictions(prev => {
           const next = { ...prev };

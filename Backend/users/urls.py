@@ -95,6 +95,8 @@ urlpatterns = [
     path('brand/orders/<int:order_id>/', views.brand_order_detail_view, name='brand_order_detail'),
     path('brand/orders/<int:order_id>/status/', views.brand_order_status_update_view, name='brand_order_status'),
 
+    # AI URL endpoint proxy
+    path('get-ai-url/', views.get_ai_url, name='get_ai_url'),
     # Health check
     path('health/', views.health, name='health'),
 ]

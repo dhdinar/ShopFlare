@@ -2797,3 +2797,18 @@ def brand_order_status_update_view(request, order_id):
     )
 
     return Response(OrderSerializer(order).data)
+
+
+
+
+
+
+
+from rest_framework.permissions import AllowAny
+from rest_framework.decorators import permission_classes
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_ai_url(request):
+    ai_url = "http://192.168.0.98:8080/api/weekly-prediction/"
+    return Response({"ai_url": ai_url})
