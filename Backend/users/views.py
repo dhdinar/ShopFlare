@@ -76,7 +76,7 @@ def _mark_account_verified(target: Any, user_type: str) -> bool:
 def _is_user_email_verified(user: Any) -> bool:
     return bool(getattr(user, 'is_email_verified', False))
 
-
+ 
 def _set_message_sender_brand(message: Message, brand: Any) -> None:
     setattr(message, 'sender_brand', brand)
 
@@ -2810,5 +2810,7 @@ from rest_framework.decorators import permission_classes
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_ai_url(request):
-    ai_url = "http://192.168.0.98:8080/api/weekly-prediction/"
+    ai_url = "http://10.135.97.202:8080/api/weekly-prediction/"
     return Response({"ai_url": ai_url})
+
+  
